@@ -2,5 +2,9 @@ node_modules/
 .next/
 .env
 .env.local
+.env.*
+!.env.example
 .DS_Store
 next-env.d.ts
+pnpm-debug.log*
+package-lock.json

@@ -2,6 +2,7 @@ import { Wallet, Repeat, Gift, Activity as ActivityIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth";
+import { WalletConnectionCard } from "@/components/wallet/wallet-connection-card";
 
 const summaryCards = [
   { icon: Wallet, label: "Wallet balance", hint: "Connect a wallet to see this" },
@@ -51,18 +52,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Connected wallet</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <EmptyState
-              icon={Wallet}
-              title="No wallet connected"
-              description="Connect a wallet to start scheduling payments."
-            />
-          </CardContent>
-        </Card>
+        <WalletConnectionCard />
       </div>
     </div>
   );

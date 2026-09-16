@@ -1,114 +1,118 @@
-# Autopayze — frontend foundation
+# Autopayze
 
-Next.js 16 (App Router) frontend for Autopayze: wallet, payments, schedules,
-airdrops, an AI agent interface, and an admin dashboard, all themed for
-light and dark mode from a shared token system.
+Autopayze is a Stellar-first payment platform for AI-assisted payment intent orchestration, scheduled transfers, and wallet-based automation. The product is designed around a critical safety boundary: the AI may interpret requests and generate structured payment intents, but it never directly controls keys or executes financial transactions. Deterministic application code and explicit user approval remain the enforcement layer.
 
-## Getting started
+## Current status
 
-```bash
-npm install
-cp .env.example .env.local   # fill in your Supabase project URL + anon key
-npm run dev
-```
+This repository is the foundation milestone for the project. It includes:
 
-Then run the SQL migration in `supabase/migrations/0001_profiles_and_roles.sql`
-against your Supabase project before testing auth (SQL editor, or
-`supabase db push` if you use the CLI).
+- Next.js 16 app shell and responsive authenticated navigation
+- Supabase Auth integration and SSR session setup
+- Login, signup, onboarding, protected routes, and admin gate
+- Stellar-oriented types and validation boundaries
+- Wallet connection state abstraction and wrong-network protection
+- Empty or placeholder states for features not yet implemented
 
-## What's implemented in this phase
+The project intentionally does not fake backend execution. If a feature is not implemented, it is modeled as an empty state or an abstraction with clear future responsibilities.
 
-- Full route shell: marketing page, auth (`/login`, `/signup`), the
-  authenticated app (`/dashboard`, `/wallet`, `/payments`, `/schedules`,
-  `/airdrops`, `/agent`, `/activity`, `/settings`), and `/admin` with its
-  nested routes.
-- Light/dark theming via semantic Tailwind tokens (see "Theming" below).
-- Supabase auth (email/password) wired to real sign-in/sign-up/sign-out.
-- Server-side admin authorization (see "Admin access" below).
-- Reusable `DataTable`, `Card`, `Button`, `Badge`, `EmptyState` primitives.
+## Architecture
 
-**Not implemented yet** (intentionally — this phase is the frontend
-foundation, not execution logic): actual payment/schedule/airdrop
-execution, the AI agent's backend, and real data behind the admin
-tables. Every page that would show that data currently shows an honest
-empty state instead of fabricated numbers — wire up a Supabase query (or
-API route) where you see `rows={[]}` / `status="empty"` in the admin
-pages, and in the dashboard's summary cards.
+The structure separates responsibilities between frontend UI, auth, wallet state, Stellar validation, and future backend/agent layers.
 
-## Theming
+- app/: routes, layouts, landing page, auth callback, protected app shell, admin shell
+- components/: reusable UI, layout, wallet UI, authentication, marketing primitives
+- lib/: auth, Supabase SSR, Stellar validation and client
+- providers/: wallet provider and app state boundaries
+- agents/: future AI orchestration/provider schemas and tools
+- supabase/: database migrations and schema expectations
+- tests/: validation and boundary tests
 
-All colors are semantic tokens (`background`, `foreground`, `muted`,
-`border`, `card`, `input`, `primary`, `destructive`, `success`, `warning`,
-`info`) defined as CSS variables in `src/app/globals.css`, once for
-`:root` (light) and once for `.dark`. Tailwind's `darkMode: "class"` picks
-up the `.dark` class on `<html>`.
+## Tech stack
 
-- **No flash of wrong theme**: an inline script in `src/app/layout.tsx`
-  (`themeInitScript`, from `theme-provider.tsx`) runs before paint and
-  applies `.dark` to `<html>` synchronously, reading the same
-  `localStorage` key the React `ThemeProvider` uses afterward.
-- **Persistence + system preference**: `ThemeProvider` supports
-  `light` / `dark` / `system`, persists the choice to `localStorage`, and
-  listens for OS-level theme changes when set to `system`.
-- **Switching themes**: the `<ThemeSwitcher />` component (used in the
-  marketing header, app header, and both settings pages).
+- Next.js 16 + App Router
+- React 19
+- TypeScript
+- Tailwind CSS
+- Supabase Auth + SSR
+- Stellar JavaScript SDK
+- Zod validation
+- Vitest
+- pnpm
 
-When building new UI, reach for the Tailwind classes that resolve to
-these tokens (`bg-card`, `text-muted-foreground`, `border-border`, etc.)
-rather than a hard-coded color, so it's correct in both themes for free.
+## Local development
 
-## Admin access
+1. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+2. Copy the example environment file:
+   ```bash
+   cp .env.example .env.local
+   ```
+3. Fill in your Supabase environment values.
+4. Run the app:
+   ```bash
+   pnpm dev
+   ```
 
-`/admin` is protected in two layers:
+## Environment variables
 
-1. **`src/proxy.ts`** (Next.js 16's replacement for `middleware.ts`) — runs on every request to `/admin/*`. Redirects
-   unauthenticated visitors to `/login?next=/admin`, and authenticated
-   non-admins to `/unauthorized`, before any admin page renders.
-2. **`src/app/admin/layout.tsx`** — calls `requireAdmin()` again at render
-   time, so no nested admin page can accidentally skip the check.
+See .env.example for the current contract:
 
-Both read the caller's role from the `profiles` table (see the migration),
-never from anything the client sends — so it can't be spoofed by editing
-a cookie or request body.
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+- GROQ_API_KEY
+- NEXT_PUBLIC_STELLAR_NETWORK
+- NEXT_PUBLIC_STELLAR_HORIZON_URL
+- NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL
+- SUPABASE_SERVICE_ROLE_KEY (server-only)
 
-### Provisioning the admin role
+Never expose private keys, service-role keys, or Groq keys to client-side code.
 
-There's no admin-management UI in this phase (see `/admin/settings`).
-To make a user an admin right now:
+## Supabase setup
 
-```sql
-update public.profiles set role = 'admin' where email = 'someone@example.com';
-```
+1. Create a Supabase project.
+2. Set project URL and publishable key in .env.local.
+3. Run the migration in supabase/migrations/0001_profiles_and_roles.sql.
+4. Configure auth providers for Google and GitHub.
+5. In Supabase Auth > URL Configuration > Redirect URLs, add both:
+   - `http://localhost:3000/auth/callback`
+   - `https://*.app.github.dev/auth/callback`
 
-Run that in the Supabase SQL editor. A future phase can add a proper
-"manage admins" screen on top of the same `profiles.role` column.
+The auth buttons use the browser's current origin, so localhost redirects back
+to localhost and a Codespaces forwarded port redirects back to that Codespaces
+URL. When using a specific forwarded URL, add its exact callback URL as well if
+your Supabase project does not accept the wildcard pattern.
 
-### Service-role key
+## Google OAuth
 
-`SUPABASE_SERVICE_ROLE_KEY` in `.env.example` is there for when a future
-phase needs privileged writes that bypass RLS (e.g. an admin bulk action).
-It's deliberately unused right now. If you do add it: only reference it
-inside a route handler or server action, never a Client Component, and
-never give it a `NEXT_PUBLIC_` prefix.
+In Supabase Auth > Providers > Google:
 
-## Project structure
+- Enable Google sign-in
+- Add your app URL and callback domain
+- Use the redirect URL pattern from your Supabase dashboard
 
-```
-src/
-  app/
-    page.tsx                 marketing landing page
-    login/, signup/, auth/callback/
-    (app)/                   route group — all wrapped by requireUser()
-      dashboard/ wallet/ payments/ schedules/ airdrops/ agent/ activity/ settings/
-    admin/                   wrapped by requireAdmin()
-      users/ payments/ schedules/ airdrops/ wallets/ agent/ activity/ settings/
-    unauthorized/
-  components/
-    theme/                   ThemeProvider, ThemeSwitcher
-    ui/                      Button, Card, Badge, DataTable, EmptyState
-    layout/                  headers, sidebars, nav, auth shell
-    marketing/, auth/
-  lib/
-    supabase/                browser client, server client, middleware helper
-    auth.ts                  requireUser(), requireAdmin(), getOptionalUser()
-```
+## GitHub OAuth
+
+In Supabase Auth > Providers > GitHub:
+
+- Enable GitHub sign-in
+- Add the app callback URL configured in Supabase
+
+## Stellar Testnet
+
+This milestone is intentionally pinned to Stellar Testnet by default. The app checks the wallet network before enabling payment workflows. Wallets connected to the wrong network show a warning state rather than silently assuming safety.
+
+## Security
+
+This codebase does not store private keys or trust AI-generated transaction instructions. All blockchain execution remains behind deterministic app logic and user approval.
+
+## Roadmap
+
+- secure payment intent approval flow
+- budget and policy enforcement
+- scheduled payment engine
+- AI provider abstraction and tool execution
+- stable wallet persistence and profile data model
+- admin operational tooling
+- real execution verification and receipts

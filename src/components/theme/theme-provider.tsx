@@ -55,19 +55,20 @@ export const themeInitScript = `
 `;
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [preference, setPreferenceState] = useState<ThemePreference>("system");
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
+  const [preference, setPreferenceState] = useState<ThemePreference>(() => {
+    if (typeof window === "undefined") return "system";
+    return (
+      (window.localStorage.getItem(STORAGE_KEY) as ThemePreference | null) ??
+      "system"
+    );
+  });
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() =>
+    preference === "system" ? getSystemTheme() : preference,
+  );
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY) as
-      | ThemePreference
-      | null;
-    const initial = stored ?? "system";
-    setPreferenceState(initial);
-    const resolved = initial === "system" ? getSystemTheme() : initial;
-    setResolvedTheme(resolved);
-    applyThemeClass(resolved);
-  }, []);
+    applyThemeClass(resolvedTheme);
+  }, [resolvedTheme]);
 
   useEffect(() => {
     if (preference !== "system") return;

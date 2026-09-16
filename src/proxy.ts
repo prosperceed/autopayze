@@ -10,7 +10,6 @@ export async function proxy(request: NextRequest) {
 
   if (!isAdminRoute) return response;
 
-  // Unauthenticated: go through the auth flow, then back to /admin.
   if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -18,14 +17,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Authenticated: confirm role before letting the request through.
-  // (This is a fast, request-scoped check in addition to the
-  // requireAdmin() call each admin page/layout makes — belt and
-  // braces, since middleware and the page render are separate
-  // trust boundaries.)
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
