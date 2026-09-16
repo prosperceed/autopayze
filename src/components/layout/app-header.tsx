@@ -39,8 +39,28 @@ export function AppHeader({
           >
             <Menu className="h-5 w-5" />
           </button>
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 md:hidden"
+            aria-label="Autopayze dashboard"
+          >
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M4 12L10 18L20 6"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            <span className="font-display text-base font-semibold tracking-tight">
+              Autopayze
+            </span>
+          </Link>
           {title && (
-            <h1 className="text-sm font-semibold text-foreground sm:text-base">
+            <h1 className="hidden text-sm font-semibold text-foreground sm:text-base md:block">
               {title}
             </h1>
           )}
