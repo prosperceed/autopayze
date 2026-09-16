@@ -63,9 +63,12 @@ export function SiteHeader() {
           >
             Log in
           </Link>
+            <div className="hidden md:block">
+
           <Link href="/signup" className={buttonVariants({ size: "sm" })}>
             Get started
           </Link>
+          </div>
         </div>
       </div>
 
@@ -86,16 +89,19 @@ export function SiteHeader() {
             >
               Sign in
             </Link>
-            <Link
-              href="/signup"
-              onClick={() => setOpen(false)}
-              className={buttonVariants({ className: "mt-2 w-full" })}
-            >
-              Get started
-            </Link>
+              <Link
+                href="/signup"
+                onClick={() => setOpen(false)}
+                className={buttonVariants({ className: "w-full" })}
+              >
+                Get started
+              </Link>
+         
           </nav>
         </div>
       )}
     </header>
   );
 }
+
+          
