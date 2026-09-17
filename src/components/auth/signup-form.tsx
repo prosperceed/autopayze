@@ -15,6 +15,7 @@ export function SignupForm() {
 
     const supabase = createClient();
     const callbackUrl = new URL("/auth/callback", window.location.origin);
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {

@@ -15,12 +15,11 @@ export function LoginForm() {
 
     const supabase = createClient();
     const callbackUrl = new URL("/auth/callback", window.location.origin);
-    console.log("Callback URL:", callbackUrl);
-    
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: callbackUrl.toString(),
+        redirectTo: `${window.location.origin}/auth/callback`
       },
     });
 
