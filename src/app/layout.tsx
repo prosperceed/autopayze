@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Space_Grotesk, Inter } from "next/font/google";
 import { ThemeProvider, themeInitScript } from "@/components/theme/theme-provider";
+import { NotificationProvider } from "@/components/ui/notification";
+import { NotificationRouteListener } from "@/components/ui/notification-route-listener";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -35,7 +38,14 @@ export default function RootLayout({
         className={`${spaceGrotesk.variable} ${inter.variable} font-body antialiased`}
         suppressHydrationWarning
       >
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <NotificationProvider>
+            <Suspense fallback={null}>
+              <NotificationRouteListener />
+            </Suspense>
+            {children}
+          </NotificationProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

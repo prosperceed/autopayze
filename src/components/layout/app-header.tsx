@@ -8,6 +8,7 @@ import { NavSidebar } from "./nav-sidebar";
 import { appNavItems } from "./app-sidebar";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useNotification } from "@/components/ui/notification";
 
 export function AppHeader({
   title,
@@ -18,10 +19,16 @@ export function AppHeader({
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const { notify } = useNotification();
 
   async function handleLogout() {
     const supabase = createClient();
     await supabase.auth.signOut();
+    notify({
+      type: "info",
+      title: "You're logged out",
+      message: "Your session has been securely ended.",
+    });
     router.push("/");
     router.refresh();
   }

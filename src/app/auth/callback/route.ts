@@ -25,5 +25,7 @@ export async function GET(request: Request) {
     );
   }
 
-  return NextResponse.redirect(new URL(next, origin));
+  const destination = new URL(next, origin);
+  destination.searchParams.set("notice", "logged-in");
+  return NextResponse.redirect(destination);
 }
