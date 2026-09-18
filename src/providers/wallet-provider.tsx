@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -13,6 +14,7 @@ import {
   requestAccess,
   signTransaction as signFreighterTransaction,
 } from "@stellar/freighter-api";
+import { createClient } from "@/lib/supabase/client";
 import { getNetworkConfig } from "@/lib/stellar/client";
 import { getConfiguredNetwork } from "@/lib/stellar/network";
 import {
@@ -41,11 +43,65 @@ export type WalletContextValue = {
 };
 
 const WalletContext = createContext<WalletContextValue | null>(null);
+const WALLET_STORAGE_KEY = "autopayze-wallet-state";
+
+function readStoredWallet(): WalletConnection | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(WALLET_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<WalletConnection>;
+    if (!parsed.address || !parsed.network || !parsed.connectedAt) return null;
+    return {
+      address: parsed.address,
+      network: parsed.network,
+      walletType: parsed.walletType ?? "Freighter",
+      connectedAt: parsed.connectedAt,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const expectedNetwork = getConfiguredNetwork();
-  const [connection, setConnection] = useState<WalletConnection | null>(null);
+  const [connection, setConnection] = useState<WalletConnection | null>(readStoredWallet);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (connection) {
+      window.localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(connection));
+      return;
+    }
+    window.localStorage.removeItem(WALLET_STORAGE_KEY);
+  }, [connection]);
+
+  const syncWalletToSupabase = useCallback(async (walletAddress: string, walletNetwork: string, active: boolean) => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    const { error } = await supabase.from("wallets").upsert(
+      {
+        user_id: user.id,
+        address: walletAddress,
+        network: walletNetwork,
+        wallet_type: "Freighter",
+        is_active: active,
+        connected_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" },
+    );
+
+    if (error) {
+      console.error("Wallet sync failed:", error.message);
+    }
+  }, []);
 
   const connect = useCallback(async () => {
     setError(null);
@@ -62,21 +118,28 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         throw new Error("wrongNetwork");
       }
 
-      setConnection({
+      const nextConnection = {
         address: addressResult.address.trim(),
         network: resolvedNetwork,
         walletType: "Freighter",
         connectedAt: new Date().toISOString(),
-      });
+      };
+
+      setConnection(nextConnection);
+      await syncWalletToSupabase(nextConnection.address, nextConnection.network, true);
+      window.localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(nextConnection));
     } catch (connectionError) {
       setError(connectionError instanceof Error ? connectionError.message : "walletUnavailable");
     }
-  }, [expectedNetwork]);
+  }, [expectedNetwork, syncWalletToSupabase]);
 
-  const disconnect = useCallback(() => {
+  const disconnect = useCallback(async () => {
+    if (connection) {
+      await syncWalletToSupabase(connection.address, connection.network, false);
+    }
     setConnection(null);
     setError(null);
-  }, []);
+  }, [connection, syncWalletToSupabase]);
 
   const getAddress = useCallback(() => connection?.address ?? null, [connection]);
   const getConnectedNetwork = useCallback(() => connection?.network ?? null, [connection]);
