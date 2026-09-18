@@ -4,7 +4,7 @@ import type {
   AgentProvider,
   AgentResponsePayload,
 } from '@/agents/core/agent';
-import { agentSystemPrompt } from '../../prompts/system';
+import { agentSystemPrompt } from '@/agents/prompts/system';
 
 export function normalizeAgentIntent(payload: AgentResponsePayload): AgentIntent {
   switch (payload.intent.action) {
@@ -33,7 +33,7 @@ export class GroqProvider implements AgentProvider {
     }
 
     const body = {
-      model: 'llama-3.3-70b-versatile',
+      model: 'openai/gpt-oss-120b',
       temperature: 0.2,
       response_format: {
         type: 'json_schema',
