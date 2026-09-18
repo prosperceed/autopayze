@@ -10,13 +10,20 @@ export async function GET(request: Request) {
       ? requestedPath
       : "/dashboard";
 
-  if (code) {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      return NextResponse.redirect(new URL(next, origin));
-    }
+  if (!code) {
+    return NextResponse.redirect(
+      new URL("/login?error=auth-callback-failed", origin),
+    );
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth-callback-failed`);
+  const supabase = await createClient();
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) {
+    console.error("OAuth callback error:", error.message);
+    return NextResponse.redirect(
+      new URL("/login?error=auth-callback-failed", origin),
+    );
+  }
+
+  return NextResponse.redirect(new URL(next, origin));
 }

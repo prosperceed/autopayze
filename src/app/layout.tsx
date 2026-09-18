@@ -28,9 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Runs before paint so the correct theme class is already
-            applied to <html> — this is what prevents a flash of the
-            wrong theme on load. */}
+       
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body
