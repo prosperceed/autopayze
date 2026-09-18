@@ -22,6 +22,7 @@ export function AppHeader({
   async function handleLogout() {
     const supabase = createClient();
     await supabase.auth.signOut();
+    setOpen(false);
     router.push("/");
     router.refresh();
   }
@@ -93,7 +94,7 @@ export function AppHeader({
             className="absolute inset-0 bg-foreground/20 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute inset-y-0 left-0 w-64 border-r border-border bg-card p-4">
+          <div className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-card p-4">
             <div className="mb-4 flex items-center justify-between">
               <Link
                 href="/dashboard"
@@ -111,9 +112,17 @@ export function AppHeader({
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div onClick={() => setOpen(false)}>
+            <div className="flex-1 overflow-y-auto" onClick={() => setOpen(false)}>
               <NavSidebar items={appNavItems} />
             </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="mt-4 flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+              Log out
+            </button>
           </div>
         </div>
       )}
