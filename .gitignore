@@ -8,3 +8,6 @@ node_modules/
 next-env.d.ts
 pnpm-debug.log*
 package-lock.json
+
+AGENTS.md
+CLAUDE.md

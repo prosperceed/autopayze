@@ -4,16 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { Menu, X, LogOut } from "lucide-react";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
-import { NavSidebar, type NavItem } from "./nav-sidebar";
+import { NavSidebar } from "./nav-sidebar";
+import { appNavItems } from "./app-sidebar";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 export function AppHeader({
-  navItems,
   title,
   userEmail,
 }: {
-  navItems: NavItem[];
   title?: string;
   userEmail?: string | null;
 }) {
@@ -113,7 +112,7 @@ export function AppHeader({
               </button>
             </div>
             <div onClick={() => setOpen(false)}>
-              <NavSidebar items={navItems} />
+              <NavSidebar items={appNavItems} />
             </div>
           </div>
         </div>
