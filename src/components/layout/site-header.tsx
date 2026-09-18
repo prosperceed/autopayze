@@ -9,7 +9,7 @@ import { buttonVariants } from "@/components/ui/button";
 const nav = [
   { href: "#how-it-works", label: "How it works" },
   { href: "#features", label: "Features" },
-  { href: "#pricing", label: "Pricing" },
+ 
 ];
 
 export function SiteHeader() {

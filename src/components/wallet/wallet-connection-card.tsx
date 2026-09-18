@@ -11,7 +11,7 @@ function shortAddress(address: string) {
 }
 
 export function WalletConnectionCard() {
-  const { connection, isConnected, warning, connect, disconnect } = useWallet();
+  const { connection, isConnected, warning, connect, disconnect, error } = useWallet();
 
   return (
     <Card>
@@ -58,6 +58,7 @@ export function WalletConnectionCard() {
             <Button onClick={connect} className="w-full">
               Connect Stellar wallet
             </Button>
+            {error ? <p className="text-sm text-destructive">Unable to connect wallet. Check that Freighter is installed and unlocked.</p> : null}
           </>
         )}
       </CardContent>

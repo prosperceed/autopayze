@@ -7,9 +7,19 @@ import {
   useMemo,
   useState,
   type ReactNode,
-} from 'react';
-import { getConfiguredNetwork, isExpectedNetwork } from '@/lib/stellar/network';
-import { getWalletWarning, isWalletAddressValid } from '@/lib/stellar/wallet';
+} from "react";
+import {
+  getNetwork as getFreighterNetwork,
+  requestAccess,
+  signTransaction as signFreighterTransaction,
+} from "@stellar/freighter-api";
+import { getNetworkConfig } from "@/lib/stellar/client";
+import { getConfiguredNetwork } from "@/lib/stellar/network";
+import {
+  detectWalletNetwork,
+  getWalletWarning,
+  isWalletAddressValid,
+} from "@/lib/stellar/wallet";
 
 export type WalletConnection = {
   address: string;
@@ -25,8 +35,9 @@ export type WalletContextValue = {
   disconnect: () => void;
   getAddress: () => string | null;
   getNetwork: () => string | null;
-  signTransaction: () => Promise<string | null>;
+  signTransaction: (transactionXdr: string) => Promise<string | null>;
   warning: string | null;
+  error: string | null;
 };
 
 const WalletContext = createContext<WalletContextValue | null>(null);
@@ -34,45 +45,49 @@ const WalletContext = createContext<WalletContextValue | null>(null);
 export function WalletProvider({ children }: { children: ReactNode }) {
   const expectedNetwork = getConfiguredNetwork();
   const [connection, setConnection] = useState<WalletConnection | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const connect = useCallback(async () => {
-    const wallet = (window as typeof window & { freighter?: { getAddress?: () => Promise<string>; getNetwork?: () => Promise<string>; signTransaction?: () => Promise<string> } }).freighter;
+    setError(null);
 
-    if (!wallet || typeof wallet.getAddress !== 'function') {
-      throw new Error('walletUnavailable');
+    try {
+      const addressResult = await requestAccess();
+      if (addressResult.error || !isWalletAddressValid(addressResult.address)) {
+        throw new Error(addressResult.error ? "walletUnavailable" : "invalidAddress");
+      }
+
+      const networkResult = await getFreighterNetwork();
+      const resolvedNetwork = detectWalletNetwork(networkResult.network);
+      if (networkResult.error || !resolvedNetwork || resolvedNetwork !== expectedNetwork) {
+        throw new Error("wrongNetwork");
+      }
+
+      setConnection({
+        address: addressResult.address.trim(),
+        network: resolvedNetwork,
+        walletType: "Freighter",
+        connectedAt: new Date().toISOString(),
+      });
+    } catch (connectionError) {
+      setError(connectionError instanceof Error ? connectionError.message : "walletUnavailable");
     }
-
-    const address = await wallet.getAddress();
-    if (!isWalletAddressValid(address)) {
-      throw new Error('invalidAddress');
-    }
-
-    const network = await wallet.getNetwork?.();
-    const resolvedNetwork = network ?? expectedNetwork;
-    if (!isExpectedNetwork(resolvedNetwork)) {
-      throw new Error('wrongNetwork');
-    }
-
-    setConnection({
-      address,
-      network: resolvedNetwork,
-      walletType: 'Freighter',
-      connectedAt: new Date().toISOString(),
-    });
   }, [expectedNetwork]);
 
   const disconnect = useCallback(() => {
     setConnection(null);
+    setError(null);
   }, []);
 
   const getAddress = useCallback(() => connection?.address ?? null, [connection]);
-  const getNetwork = useCallback(() => connection?.network ?? null, [connection]);
+  const getConnectedNetwork = useCallback(() => connection?.network ?? null, [connection]);
 
-  const signTransaction = useCallback(async () => {
+  const signTransaction = useCallback(async (transactionXdr: string) => {
     if (!connection) return null;
-    const wallet = (window as typeof window & { freighter?: { signTransaction?: () => Promise<string> } }).freighter;
-    if (!wallet?.signTransaction) return null;
-    return wallet.signTransaction();
+    const result = await signFreighterTransaction(transactionXdr, {
+      address: connection.address,
+      networkPassphrase: getNetworkConfig(connection.network as "stellar-testnet" | "stellar-mainnet").networkPassphrase,
+    });
+    return result.error ? null : result.signedTxXdr;
   }, [connection]);
 
   const value = useMemo<WalletContextValue>(() => ({
@@ -81,10 +96,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     connect,
     disconnect,
     getAddress,
-    getNetwork,
+    getNetwork: getConnectedNetwork,
     signTransaction,
     warning: getWalletWarning(connection?.network, expectedNetwork),
-  }), [connect, connection, disconnect, expectedNetwork, getAddress, getNetwork, signTransaction]);
+    error,
+  }), [connect, connection, disconnect, error, expectedNetwork, getConnectedNetwork, signTransaction]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }

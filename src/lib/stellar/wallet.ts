@@ -30,11 +30,12 @@ export function normalizeWalletAddress(address: string): string {
   return address.trim();
 }
 
-export function detectWalletNetwork(network: string | undefined, expected: StellarNetwork): StellarNetwork | null {
+export function detectWalletNetwork(network: string | undefined): StellarNetwork | null {
   if (!network) return null;
-  if (network === 'testnet' || network === 'stellar-testnet') return 'stellar-testnet';
-  if (network === 'public' || network === 'stellar-mainnet') return 'stellar-mainnet';
-  return expected;
+  const normalized = network.trim().toLowerCase();
+  if (normalized === 'testnet' || normalized === 'stellar-testnet') return 'stellar-testnet';
+  if (normalized === 'public' || normalized === 'mainnet' || normalized === 'stellar-mainnet') return 'stellar-mainnet';
+  return null;
 }
 
 export function isWalletAddressValid(address: string): boolean {
