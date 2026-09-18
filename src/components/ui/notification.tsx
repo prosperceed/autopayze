@@ -6,11 +6,14 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const STORAGE_KEY = "autopayze-notification";
 
 type NotificationType = "success" | "error" | "info";
 
@@ -44,17 +47,29 @@ const notificationStyles: Record<NotificationType, { icon: typeof CheckCircle2; 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notification, setNotification] = useState<Notification | null>(null);
   const [duration, setDuration] = useState(4500);
+  const hasHydrated = useRef(false);
 
-  const dismiss = useCallback(() => setNotification(null), []);
+  const dismiss = useCallback(() => {
+    setNotification(null);
+    if (typeof window !== "undefined") {
+      window.sessionStorage.removeItem(STORAGE_KEY);
+    }
+  }, []);
 
   const notify = useCallback((options: NotifyOptions) => {
-    setDuration(options.duration ?? 4500);
-    setNotification({
+    const nextNotification = {
       id: Date.now(),
       title: options.title,
       message: options.message,
       type: options.type ?? "info",
-    });
+    };
+
+    setDuration(options.duration ?? 4500);
+    setNotification(nextNotification);
+
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(nextNotification));
+    }
   }, []);
 
   useEffect(() => {
@@ -62,6 +77,23 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const timeout = window.setTimeout(dismiss, duration);
     return () => window.clearTimeout(timeout);
   }, [dismiss, duration, notification]);
+
+  useEffect(() => {
+    if (hasHydrated.current || typeof window === "undefined") return;
+    hasHydrated.current = true;
+
+    const pending = window.sessionStorage.getItem(STORAGE_KEY);
+    if (!pending) return;
+
+    try {
+      const parsed = JSON.parse(pending) as Notification;
+      if (!parsed?.title) return;
+      setDuration(4500);
+      setNotification(parsed);
+    } catch {
+      window.sessionStorage.removeItem(STORAGE_KEY);
+    }
+  }, []);
 
   const value = useMemo(() => ({ notify, dismiss }), [dismiss, notify]);
 
