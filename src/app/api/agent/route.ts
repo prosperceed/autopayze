@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
     const user = await requireUser();
     const supabase = await createClient();
-    const requestWallet = body?.wallet as { address?: string; network?: string } | undefined;
+    const requestWallet = (body?.wallet ?? body) as { address?: string; network?: string } | undefined;
     const { data: walletData } = await supabase
       .from('wallets')
       .select('address, network')

@@ -45,7 +45,13 @@ export default function AgentPage() {
       const res = await fetch("/api/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: trimmedPrompt }),
+        body: JSON.stringify({
+          prompt: trimmedPrompt,
+          wallet: {
+            address: connection.address,
+            network: connection.network,
+          },
+        }),
       });
 
       const data = await res.json();
@@ -199,16 +205,16 @@ export default function AgentPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="mt-4 flex items-center gap-2">
+          <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
             <input
               type="text"
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
               disabled={!isConnected || loading}
               placeholder={isConnected ? "Ask the agent to set up a payment…" : "Connect your wallet to enable the agent…"}
-              className="h-11 flex-1 rounded-md border border-border bg-input px-3 text-sm text-foreground placeholder:text-muted-foreground disabled:opacity-60"
+              className="h-11 w-full flex-1 min-w-0 rounded-md border border-border bg-input px-3 text-sm text-foreground placeholder:text-muted-foreground disabled:opacity-60"
             />
-            <Button type="submit" disabled={!isConnected || loading} className="h-11">
+            <Button type="submit" disabled={!isConnected || loading} className="h-11 w-full sm:w-auto">
               {loading ? "Sending…" : "Send"}
             </Button>
           </form>
