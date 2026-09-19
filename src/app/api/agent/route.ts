@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { requireUser } from '@/lib/auth';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 import { GroqProvider } from '@/agents/providers/groq/provider';
 import { savePromptHistory, saveTransactionHistory } from '@/lib/agent-history';
 
@@ -13,23 +12,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Prompt is required.' }, { status: 400 });
     }
 
-    const user = await requireUser();
-    const supabase = await createClient();
-    const requestWallet = (body?.wallet ?? body) as { address?: string; network?: string } | undefined;
-    const { data: walletData } = await supabase
-      .from('wallets')
-      .select('address, network')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .maybeSingle();
+    const supabase = await createServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    const resolvedWalletAddress = walletData?.address ?? requestWallet?.address;
-    const resolvedWalletNetwork = walletData?.network ?? requestWallet?.network;
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Please sign in before activating the agent.' },
+        { status: 401 },
+      );
+    }
+
+    const requestWallet = (body?.wallet ?? body) as { address?: string; network?: string } | undefined;
+    let resolvedWalletAddress = requestWallet?.address;
+    let resolvedWalletNetwork = requestWallet?.network;
+
+    // Try fetching stored wallet if not in request
+    if (!resolvedWalletAddress) {
+      const { data: walletData } = await supabase
+        .from('wallets')
+        .select('address, network')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      resolvedWalletAddress = walletData?.address;
+      resolvedWalletNetwork = walletData?.network;
+    }
 
     if (!resolvedWalletAddress || !resolvedWalletNetwork) {
       return NextResponse.json(
         { error: 'A confirmed wallet connection is required before the agent can run.' },
-        { status: 403 },
+        { status: 400 },
       );
     }
 
@@ -42,7 +57,7 @@ export async function POST(request: Request) {
     });
 
     if (!structured) {
-      return NextResponse.json({ error: 'Agent response was not produced.' }, { status: 500 });
+      return NextResponse.json({ error: 'Agent response could not be generated.' }, { status: 500 });
     }
 
     const intent = structured.intent;
@@ -65,9 +80,9 @@ export async function POST(request: Request) {
       status: structured.status,
     };
 
-    await savePromptHistory(promptHistory);
+    const promptSave = await savePromptHistory(promptHistory);
 
-    await saveTransactionHistory({
+    const txSave = await saveTransactionHistory({
       user_id: user.id,
       wallet_address: resolvedWalletAddress,
       wallet_network: resolvedWalletNetwork,
@@ -88,14 +103,21 @@ export async function POST(request: Request) {
       summary: structured.summary,
       status: structured.status,
       details: intent,
+      transactionId: txSave.id ?? null,
+      promptHistoryId: promptSave.id ?? null,
+      dbRecorded: promptSave.recorded && txSave.recorded,
     });
   } catch (error) {
     console.error('Agent API error:', error);
+    let errorMessage = 'The agent could not process your request.';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      errorMessage = String((error as { message: unknown }).message);
+    }
+
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : 'The agent could not process your request.',
-      },
+      { error: errorMessage },
       { status: 500 },
     );
   }

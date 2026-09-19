@@ -24,4 +24,27 @@ describe('buildPaymentTransaction', () => {
     expect(result.preview.recipient).toBe(destinationAddress);
     expect(result.xdr).toContain('AAAA');
   });
+
+  it('builds a transaction with custom memo and asset', async () => {
+    const sourceAddress = 'GC6VO656MIL7C4VS3MG55K7XD2NJVYJ6L5SH6IJQBXGAAWBJ4KZCJXXH';
+    const destinationAddress = 'GC6VO656MIL7C4VS3MG55K7XD2NJVYJ6L5SH6IJQBXGAAWBJ4KZCJXXH';
+
+    const result = await buildPaymentTransaction(
+      {
+        sourceAddress,
+        destinationAddress,
+        amount: '12.5',
+        asset: 'XLM',
+        network: 'stellar-testnet',
+        memo: 'Salary disbursement',
+      },
+      {
+        sourceAccount: new Account(sourceAddress, '100'),
+      },
+    );
+
+    expect(result.preview.amount).toBe('12.5');
+    expect(result.preview.memo).toBe('Salary disbursement');
+    expect(result.preview.approved).toBe(true);
+  });
 });

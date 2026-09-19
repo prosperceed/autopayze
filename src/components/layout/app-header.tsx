@@ -9,6 +9,7 @@ import { appNavItems } from "./app-sidebar";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useNotification } from "@/components/ui/notification";
+import { WalletConnectButton } from "@/components/wallet/wallet-connect-button";
 
 export function AppHeader({
   title,
@@ -35,8 +36,8 @@ export function AppHeader({
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-border px-4 sm:px-6">
-        <div className="flex items-center gap-3">
+      <header className="flex h-16 items-center justify-between border-b border-border px-3 sm:px-6">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             type="button"
             className="flex h-9 w-9 items-center justify-center rounded-md text-foreground hover:bg-muted md:hidden"
@@ -72,7 +73,8 @@ export function AppHeader({
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+        
           <ThemeSwitcher />
           {userEmail && (
             <div className="hidden items-center gap-2 sm:flex">
@@ -100,7 +102,7 @@ export function AppHeader({
             className="absolute inset-0 bg-foreground/20 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-card p-4">
+          <div className="absolute inset-y-0 left-0 flex w-72 flex-col border-r border-border bg-card p-4 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <Link
                 href="/dashboard"
@@ -118,9 +120,17 @@ export function AppHeader({
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="flex-1" onClick={() => setOpen(false)}>
+
+            {/* Mobile drawer wallet status & connect */}
+            <div className="mb-4 rounded-lg border border-border bg-muted/30 p-3">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Wallet</p>
+              <WalletConnectButton size="sm" className="w-full justify-center" />
+            </div>
+
+            <div className="flex-1 overflow-y-auto" onClick={() => setOpen(false)}>
               <NavSidebar items={appNavItems} />
             </div>
+
             {userEmail && (
               <div className="border-t border-border pt-3">
                 <button

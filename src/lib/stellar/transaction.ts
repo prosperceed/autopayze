@@ -7,7 +7,7 @@ import {
   Operation,
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
-import { getNetworkConfig } from './client';
+import { getHorizonClient, getNetworkConfig, type StellarNetwork } from './client';
 
 export type PreviewWarning = {
   level: 'warning' | 'info';
@@ -59,6 +59,16 @@ export function createTransactionPreview(values: Partial<TransactionPreview> = {
   };
 }
 
+export async function fundTestnetAccount(address: string): Promise<boolean> {
+  try {
+    const response = await fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(address)}`);
+    return response.ok;
+  } catch (error) {
+    console.warn('Friendbot funding error:', error);
+    return false;
+  }
+}
+
 function getConfiguredAssetIssuer(asset: 'XLM' | 'USDC' | 'USDT', network: 'stellar-testnet' | 'stellar-mainnet') {
   if (asset === 'XLM') return null;
 
@@ -93,23 +103,65 @@ export async function buildPaymentTransaction(
 
   const { networkPassphrase, horizonUrl } = getNetworkConfig(network);
   const server = options.server ?? new Horizon.Server(horizonUrl, { allowHttp: false, appName: 'Autopayze' });
-  const account = options.sourceAccount ?? (await server.loadAccount(sourceAddress));
-  const assetDefinition = asset === 'XLM'
-    ? Asset.native()
-    : new Asset(asset, getConfiguredAssetIssuer(asset, network) ?? '');
+
+  let account: Account;
+  if (options.sourceAccount) {
+    account = options.sourceAccount;
+  } else {
+    try {
+      const loaded = await server.loadAccount(sourceAddress);
+      account = new Account(sourceAddress, loaded.sequence);
+    } catch (err: unknown) {
+      // If source account does not exist on testnet, attempt friendbot funding
+      if (network === 'stellar-testnet') {
+        const funded = await fundTestnetAccount(sourceAddress);
+        if (funded) {
+          const loaded = await server.loadAccount(sourceAddress);
+          account = new Account(sourceAddress, loaded.sequence);
+        } else {
+          throw new Error('Source wallet is not funded on Stellar Testnet. Please fund with Friendbot first.');
+        }
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  // Check if destination exists; if not and paying native XLM, use createAccount
+  let isNewAccount = false;
+  try {
+    await server.loadAccount(destinationAddress);
+  } catch {
+    isNewAccount = true;
+  }
 
   const builder = new TransactionBuilder(account, {
     fee: BASE_FEE,
     networkPassphrase,
-  })
-    .addOperation(
+  });
+
+  if (isNewAccount && asset === 'XLM') {
+    builder.addOperation(
+      Operation.createAccount({
+        destination: destinationAddress,
+        startingBalance: amount,
+      }),
+    );
+  } else {
+    const assetDefinition = asset === 'XLM'
+      ? Asset.native()
+      : new Asset(asset, getConfiguredAssetIssuer(asset, network) ?? '');
+
+    builder.addOperation(
       Operation.payment({
         destination: destinationAddress,
         asset: assetDefinition,
         amount,
       }),
-    )
-    .setTimeout(180);
+    );
+  }
+
+  builder.setTimeout(180);
 
   if (memo) {
     builder.addMemo(Memo.text(memo));
@@ -130,4 +182,47 @@ export async function buildPaymentTransaction(
     }),
     xdr: transaction.toXDR(),
   };
+}
+
+export type SubmitTransactionResult = {
+  successful: boolean;
+  hash: string;
+  ledger?: number;
+  error?: string;
+};
+
+export async function submitPaymentTransaction(
+  signedXdr: string,
+  network: StellarNetwork = 'stellar-testnet',
+): Promise<SubmitTransactionResult> {
+  const { networkPassphrase } = getNetworkConfig(network);
+  const server = getHorizonClient(network);
+
+  try {
+    const transaction = TransactionBuilder.fromXDR(signedXdr, networkPassphrase);
+    const result = await server.submitTransaction(transaction);
+    return {
+      successful: true,
+      hash: result.hash,
+      ledger: result.ledger,
+    };
+  } catch (error: unknown) {
+    console.error('Stellar transaction submission failed:', error);
+    let message = 'Transaction submission failed on Stellar Horizon.';
+    if (error && typeof error === 'object' && 'response' in error) {
+      const resp = (error as { response?: { data?: { extras?: { result_codes?: Record<string, unknown> }; detail?: string } } }).response;
+      if (resp?.data?.extras?.result_codes) {
+        message = `Stellar error: ${JSON.stringify(resp.data.extras.result_codes)}`;
+      } else if (resp?.data?.detail) {
+        message = resp.data.detail;
+      }
+    } else if (error instanceof Error) {
+      message = error.message;
+    }
+    return {
+      successful: false,
+      hash: '',
+      error: message,
+    };
+  }
 }

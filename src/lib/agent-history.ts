@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 
 export type AgentHistoryInsert = {
   user_id: string;
@@ -20,22 +21,119 @@ export type AgentTransactionInsert = {
   prompt_text: string;
   summary: string;
   intent_payload: Record<string, unknown>;
-  status: 'accepted' | 'review_required' | 'rejected';
+  status: 'accepted' | 'review_required' | 'rejected' | 'executed' | 'failed';
   amount?: string | null;
   recipient?: string | null;
   asset?: string | null;
   memo?: string | null;
+  tx_hash?: string | null;
   created_at?: string;
 };
 
-export async function savePromptHistory(entry: AgentHistoryInsert) {
-  const supabase = createClient();
-  const { error } = await supabase.from('agent_prompt_history').insert(entry);
-  if (error) throw error;
+async function getDbClient() {
+  const admin = createAdminClient();
+  if (admin) return admin;
+  return createServerClient();
 }
 
-export async function saveTransactionHistory(entry: AgentTransactionInsert) {
-  const supabase = createClient();
-  const { error } = await supabase.from('agent_transactions').insert(entry);
-  if (error) throw error;
+export async function savePromptHistory(entry: AgentHistoryInsert): Promise<{ id?: string; recorded: boolean; error?: string }> {
+  try {
+    const supabase = await getDbClient();
+    const { data, error } = await supabase
+      .from('agent_prompt_history')
+      .insert(entry)
+      .select('id')
+      .maybeSingle();
+
+    if (error) {
+      console.warn('Could not save prompt history to Supabase:', error.message || error);
+      return { recorded: false, error: error.message || 'Database insert failed' };
+    }
+
+    return { id: data?.id, recorded: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn('Exception while saving prompt history:', message);
+    return { recorded: false, error: message };
+  }
+}
+
+export async function saveTransactionHistory(entry: AgentTransactionInsert): Promise<{ id?: string; recorded: boolean; error?: string }> {
+  try {
+    const supabase = await getDbClient();
+    const { data, error } = await supabase
+      .from('agent_transactions')
+      .insert(entry)
+      .select('id')
+      .maybeSingle();
+
+    if (error) {
+      console.warn('Could not save transaction history to Supabase:', error.message || error);
+      return { recorded: false, error: error.message || 'Database insert failed' };
+    }
+
+    return { id: data?.id, recorded: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn('Exception while saving transaction history:', message);
+    return { recorded: false, error: message };
+  }
+}
+
+export async function updateTransactionStatus({
+  transactionId,
+  userId,
+  status,
+  txHash,
+}: {
+  transactionId?: string;
+  userId: string;
+  status: 'executed' | 'failed' | 'accepted' | 'rejected';
+  txHash?: string;
+}): Promise<{ updated: boolean; error?: string }> {
+  try {
+    const supabase = await getDbClient();
+    let query = supabase.from('agent_transactions').update({
+      status,
+      ...(txHash ? { tx_hash: txHash } : {}),
+    });
+
+    if (transactionId) {
+      query = query.eq('id', transactionId);
+    } else {
+      query = query.eq('user_id', userId).order('created_at', { ascending: false }).limit(1);
+    }
+
+    const { error } = await query;
+    if (error) {
+      console.warn('Could not update transaction status in Supabase:', error.message || error);
+      return { updated: false, error: error.message };
+    }
+
+    return { updated: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn('Exception while updating transaction status:', message);
+    return { updated: false, error: message };
+  }
+}
+
+export async function getUserAgentHistory(userId: string) {
+  try {
+    const supabase = await getDbClient();
+    const { data, error } = await supabase
+      .from('agent_transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) {
+      return [];
+    }
+
+    return data || [];
+  } catch {
+    return [];
+  }
 }
