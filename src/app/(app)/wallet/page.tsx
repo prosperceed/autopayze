@@ -116,9 +116,9 @@ export default function WalletPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>Wallet verification is actively enforced on the public address and network context before transaction execution.</p>
-            <p>Wrong-network wallets are blocked from signing to prevent accidental mainnet/testnet mismatches.</p>
-            <p>Account existence and minimum balances on Stellar are checked before dispatching payment transactions.</p>
+            <p>Wallet verification is intentionally limited to public address and network validation in this phase.</p>
+            <p>Wrong-network wallets are flagged before any workflow proceeds.</p>
+            <p>Account existence checks are prepared via dedicated Stellar service boundaries.</p>
           </CardContent>
         </Card>
       </div>
