@@ -282,7 +282,7 @@ export default function AgentPage() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-6 max-w-4xl mx-auto">
+    <div className="flex h-full flex-col gap-6 max-w-4xl mx-auto w-full px-4 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
@@ -305,7 +305,7 @@ export default function AgentPage() {
         )}
       </div>
 
-      <Card className="flex flex-1 flex-col border-border">
+      <Card className="flex flex-1 flex-col border-border w-full max-w-full">
         <CardContent className="flex flex-1 flex-col p-4 sm:p-6">
           {!isConnected ? (
             <div className="flex flex-1 flex-col items-center justify-center py-12">
