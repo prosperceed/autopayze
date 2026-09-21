@@ -17,34 +17,34 @@ export default async function DashboardPage() {
 	const firstName = user.email?.split("@")[0] ?? "there";
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-4 sm:space-y-6 px-3 sm:px-0">
 			<div>
-				<h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+				<h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
 					Welcome back, {firstName}
 				</h1>
-				<p className="mt-1 text-sm text-muted-foreground">
+				<p className="mt-1 text-xs sm:text-sm text-muted-foreground">
 					Here&apos;s where your wallet and payment activity will show up once connected.
 				</p>
 			</div>
 
-			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+			<div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
 				{summaryCards.map((item) => (
 					<Card key={item.label}>
-						<CardContent className="pt-5">
+						<CardContent className="pt-4 sm:pt-5">
 							<item.icon className="h-4 w-4 text-muted-foreground" />
-							<p className="mt-3 text-2xl font-semibold text-foreground">—</p>
-							<p className="mt-1 text-sm text-muted-foreground">{item.label}</p>
+							<p className="mt-2 sm:mt-3 text-lg sm:text-2xl font-semibold text-foreground">—</p>
+							<p className="mt-1 text-xs sm:text-sm text-muted-foreground">{item.label}</p>
 						</CardContent>
 					</Card>
 				))}
 			</div>
 
-			<div className="grid gap-4 lg:grid-cols-3">
+			<div className="grid gap-3 sm:gap-4 grid-cols-1 lg:grid-cols-3">
 				<Card className="lg:col-span-2">
-					<CardHeader>
-						<CardTitle>Recent activity</CardTitle>
+					<CardHeader className="p-3 sm:p-5">
+						<CardTitle className="text-sm sm:text-base">Recent activity</CardTitle>
 					</CardHeader>
-					<CardContent>
+					<CardContent className="p-3 sm:p-5 pt-0">
 						<RecentTransactions />
 					</CardContent>
 				</Card>
