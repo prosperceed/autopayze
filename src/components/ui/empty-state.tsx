@@ -4,13 +4,17 @@ import { cn } from "@/lib/utils";
 export function EmptyState({
   icon: Icon,
   title,
+  emptyTitle,
   description,
+  emptyDescription,
   action,
   className,
 }: {
   icon: LucideIcon;
   title: string;
+  emptyTitle?: string;
   description: string;
+  emptyDescription?: string;
   action?: React.ReactNode;
   className?: string;
 }) {
