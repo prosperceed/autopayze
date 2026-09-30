@@ -8,6 +8,9 @@ import {
   useMemo,
   useState,
 } from "react";
+import { themeInitScript } from "./theme-init-script";
+
+export { themeInitScript };
 
 type ThemePreference = "light" | "dark" | "system";
 type ResolvedTheme = "light" | "dark";
@@ -24,35 +27,12 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function getSystemTheme(): ResolvedTheme {
   if (typeof window === "undefined") return "light";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function applyThemeClass(theme: ResolvedTheme) {
-  const root = document.documentElement;
-  root.classList.toggle("dark", theme === "dark");
+  document.documentElement.classList.toggle("dark", theme === "dark");
 }
-
-/**
- * This must be rendered before the app body paints. The matching
- * inline script in app/layout.tsx runs synchronously during hydration
- * so the correct class is already on <html> before first paint —
- * that's what prevents the flash-of-wrong-theme.
- */
-export const themeInitScript = `
-(function () {
-  try {
-    var stored = localStorage.getItem('${STORAGE_KEY}');
-    var preference = stored || 'system';
-    var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    var resolved = preference === 'system' ? (systemDark ? 'dark' : 'light') : preference;
-    if (resolved === 'dark') {
-      document.documentElement.classList.add('dark');
-    }
-  } catch (e) {}
-})();
-`;
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [preference, setPreferenceState] = useState<ThemePreference>(() => {

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Space_Grotesk, Inter } from "next/font/google";
-import { ThemeProvider, themeInitScript } from "@/components/theme/theme-provider";
+import { ThemeProvider } from "@/components/theme/theme-provider";
+import { themeInitScript } from "@/components/theme/theme-init-script";
 import { NotificationProvider } from "@/components/ui/notification";
 import { NotificationRouteListener } from "@/components/ui/notification-route-listener";
 import "./globals.css";
