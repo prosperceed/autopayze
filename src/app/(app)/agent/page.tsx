@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bot,
   Sparkles,
@@ -12,6 +12,7 @@ import {
   Send,
   Loader2,
   Trash2,
+  Calendar,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
   submitPaymentTransaction,
 } from "@/lib/stellar/transaction";
 import { WalletConnectButton } from "@/components/wallet/wallet-connect-button";
+import { detectScheduleIntent } from "@/lib/schedule-detection";
 
 export type SessionItem = {
   id: string;
@@ -54,6 +56,8 @@ export default function AgentPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<SessionItem[]>([]);
+
+  const scheduleDetection = useMemo(() => detectScheduleIntent(prompt), [prompt]);
 
   // Load session history from localStorage
   useEffect(() => {
@@ -523,6 +527,18 @@ export default function AgentPage() {
             onSubmit={handleSubmit}
             className="mt-3 sm:mt-4 flex flex-col gap-2"
           >
+            {/* Schedule detection badge — appears as user types a time/date */}
+            {scheduleDetection.isSchedule && prompt.trim() && (
+              <div className="flex items-center gap-1.5 rounded-md border border-violet-500/30 bg-violet-500/8 px-2.5 py-1.5 text-xs text-violet-600 dark:text-violet-400">
+                <Calendar className="h-3.5 w-3.5 shrink-0" />
+                <span>
+                  Detected as <strong>scheduled payment</strong>
+                  {scheduleDetection.matchedPattern && (
+                    <> — &ldquo;{scheduleDetection.matchedPattern}&rdquo;</>
+                  )}
+                </span>
+              </div>
+            )}
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <input
                 type="text"
@@ -531,10 +547,15 @@ export default function AgentPage() {
                 disabled={!isConnected || loading}
                 placeholder={
                   isConnected
-                    ? "Ask the agent (e.g., 'Send 1 XLM to GC3P...')"
+                    ? "Ask the agent (e.g., 'Send 1 XLM to GC3P...' or 'Pay weekly…')"
                     : "Connect your wallet above to enable the agent…"
                 }
-                className="h-9 sm:h-11 w-full flex-1 min-w-0 rounded-md border border-border bg-input px-3 sm:px-4 py-2 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-60 shadow-sm"
+                className={[
+                  "h-9 sm:h-11 w-full flex-1 min-w-0 rounded-md border bg-input px-3 sm:px-4 py-2 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 disabled:opacity-60 shadow-sm transition-colors",
+                  scheduleDetection.isSchedule && prompt.trim()
+                    ? "border-violet-500/50 focus:ring-violet-500"
+                    : "border-border focus:ring-primary",
+                ].join(" ")}
               />
               <Button
                 type="submit"
