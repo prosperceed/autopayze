@@ -1,16 +1,17 @@
-export default function Logo() {
+export default function AutoPayzeLogo({ className }: { className?: string }) {
 	return (
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
 			viewBox="0 0 800 650"
 			width="100%"
 			height="100%"
+			className={className}
 		>
 			<defs>
 				<linearGradient id="grad-left-arch" x1="0%" y1="0%" x2="100%" y2="100%">
-					<stop offset="0%" stop-color="#00D2FF" />
-					<stop offset="50%" stop-color="#0066FF" />
-					<stop offset="100%" stop-color="#1A103C" />
+					<stop offset="0%" stopColor="#00D2FF" />
+					<stop offset="50%" stopColor="#0066FF" />
+					<stop offset="100%" stopColor="#1A103C" />
 				</linearGradient>
 
 				<linearGradient
@@ -20,21 +21,21 @@ export default function Logo() {
 					x2="100%"
 					y2="100%"
 				>
-					<stop offset="0%" stop-color="#2B00A4" />
-					<stop offset="60%" stop-color="#8033FF" />
-					<stop offset="100%" stop-color="#C077FF" />
+					<stop offset="0%" stopColor="#2B00A4" />
+					<stop offset="60%" stopColor="#8033FF" />
+					<stop offset="100%" stopColor="#C077FF" />
 				</linearGradient>
 
 				<linearGradient id="grad-arrow" x1="0%" y1="100%" x2="100%" y2="0%">
-					<stop offset="0%" stop-color="#3B46F6" />
-					<stop offset="50%" stop-color="#00B2FE" />
-					<stop offset="100%" stop-color="#00F0FF" />
+					<stop offset="0%" stopColor="#3B46F6" />
+					<stop offset="50%" stopColor="#00B2FE" />
+					<stop offset="100%" stopColor="#00F0FF" />
 				</linearGradient>
 
 				<linearGradient id="grad-payze" x1="0%" y1="0%" x2="100%" y2="0%">
-					<stop offset="0%" stop-color="#00C8FF" />
-					<stop offset="50%" stop-color="#4B5EFC" />
-					<stop offset="100%" stop-color="#9A3BFF" />
+					<stop offset="0%" stopColor="#00C8FF" />
+					<stop offset="50%" stopColor="#4B5EFC" />
+					<stop offset="100%" stopColor="#9A3BFF" />
 				</linearGradient>
 			</defs>
 
@@ -59,24 +60,24 @@ export default function Logo() {
 				<text
 					x="400"
 					y="495"
-					text-anchor="end"
-					font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Montserrat', 'Inter', sans-serif"
-					font-weight="800"
-					font-size="78"
+					textAnchor="end"
+					fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Montserrat', 'Inter', sans-serif"
+					fontWeight="800"
+					fontSize="78"
 					fill="#FFFFFF"
-					letter-spacing="-1.5"
+					letterSpacing="-1.5"
 				>
 					Auto
 				</text>
 				<text
 					x="395"
 					y="495"
-					text-anchor="start"
-					font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Montserrat', 'Inter', sans-serif"
-					font-weight="800"
-					font-size="78"
+					textAnchor="start"
+					fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Montserrat', 'Inter', sans-serif"
+					fontWeight="800"
+					fontSize="78"
 					fill="url(#grad-payze)"
-					letter-spacing="-1.5"
+					letterSpacing="-1.5"
 				>
 					Payze
 				</text>
@@ -85,12 +86,12 @@ export default function Logo() {
 			<text
 				x="400"
 				y="555"
-				text-anchor="middle"
-				font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Inter', sans-serif"
-				font-weight="500"
-				font-size="20"
+				textAnchor="middle"
+				fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Inter', sans-serif"
+				fontWeight="500"
+				fontSize="20"
 				fill="#E2E8F0"
-				letter-spacing="4.5"
+				letterSpacing="4.5"
 			>
 				Set It. Pay It. Automatically.
 			</text>

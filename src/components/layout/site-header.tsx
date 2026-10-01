@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
-import AutopayzeLogo from "@/components/ui/AutoPayzeLogo";
+import AutoPayzeLogo from "@/components/ui/AutoPayzeLogo";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
@@ -20,7 +19,7 @@ export function SiteHeader() {
 			<div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
 				<Link href="/" className="flex items-center gap-2">
 					<span className="flex h-20 w-auto items-center justify-center ">
-						<AutopayzeLogo className="h-8 w-auto" />
+						<AutoPayzeLogo className="h-8 w-auto" />
 					</span>
 				</Link>
 
