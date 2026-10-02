@@ -38,6 +38,7 @@ export type WalletContextValue = {
   connect: () => Promise<void>;
   connectManual: (address: string, secretKey?: string) => Promise<void>;
   connectTestnetDemo: () => Promise<void>;
+  connectMobileFreighter: () => Promise<void>;
   disconnect: () => void;
   getAddress: () => string | null;
   getNetwork: () => string | null;
@@ -45,6 +46,7 @@ export type WalletContextValue = {
   warning: string | null;
   error: string | null;
   isFreighterAvailable: boolean;
+  isMobile: boolean;
   isConnecting: boolean;
   balanceVersion: number;
   refreshBalance: () => void;
@@ -79,6 +81,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isFreighterAvailable, setIsFreighterAvailable] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [balanceVersion, setBalanceVersion] = useState(0);
 
   useEffect(() => {
@@ -87,6 +90,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         (window as unknown as { freighter?: unknown }).freighter,
       );
       setIsFreighterAvailable(hasFreighter);
+      setIsMobile(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
     }
   }, []);
 
@@ -214,6 +218,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setConnection(nextConnection);
         await syncWalletToSupabase(nextConnection.address, nextConnection.network, true, "Manual");
         window.localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(nextConnection));
+
+        // If a secret key was provided, persist it server-side for the schedule runner.
+        if (secretKey && secretKey.trim()) {
+          fetch("/api/wallet/secret", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ walletAddress: address, secretKey: secretKey.trim() }),
+          }).catch((e) => console.warn("Could not persist wallet secret for schedule runner:", e));
+        }
       } catch (manualError) {
         setError(manualError instanceof Error ? manualError.message : "Failed to connect address.");
         throw manualError;
@@ -251,6 +264,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setConnection(nextConnection);
       await syncWalletToSupabase(nextConnection.address, nextConnection.network, true, "TestnetDemo");
       window.localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(nextConnection));
+
+      // Store the secret server-side so the schedule runner can sign autonomously.
+      // Fire-and-forget: a failure here is non-fatal — scheduled execution will
+      // fall back to "skipped" rather than crashing the connect flow.
+      fetch("/api/wallet/secret", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress: address, secretKey: secret }),
+      }).catch((e) => console.warn("Could not persist wallet secret for schedule runner:", e));
     } catch (demoError) {
       setError(demoError instanceof Error ? demoError.message : "Failed to initialize testnet demo wallet.");
       throw demoError;
@@ -258,6 +280,94 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setIsConnecting(false);
     }
   }, [syncWalletToSupabase]);
+
+  // 4. Mobile Freighter — SEP-0007 deep link flow
+  // Opens the Freighter mobile app which redirects back to /auth/wallet-callback
+  // with the user's public key.  We poll the session API until the key arrives,
+  // then complete the connection client-side.
+  const connectMobileFreighter = useCallback(async () => {
+    setError(null);
+    setIsConnecting(true);
+
+    try {
+      // Generate a one-time token for this session
+      const token = Array.from(crypto.getRandomValues(new Uint8Array(24)))
+        .map((b) => b.toString(36).padStart(2, "0"))
+        .join("")
+        .slice(0, 32);
+
+      // Register the pending session server-side
+      await fetch("/api/wallet/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+
+      // Build the callback URL Freighter will return to
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const callbackUrl = encodeURIComponent(
+        `${origin}/auth/wallet-callback?token=${token}&pubkey={PUBLIC_KEY}`,
+      );
+
+      // SEP-0007 URI — `web+stellar:` deep link opens Freighter mobile
+      // The `?callback=` param tells Freighter where to redirect after approval
+      const sep7Uri = `web+stellar:pay?callback=${callbackUrl}`;
+
+      // Open deep link — on mobile this hands off to the Freighter app
+      window.location.href = sep7Uri;
+
+      // Poll for the callback to complete (Freighter returns to /auth/wallet-callback
+      // which writes the address into the session, then we pick it up here)
+      const address = await new Promise<string>((resolve, reject) => {
+        const started = Date.now();
+        const TIMEOUT = 5 * 60 * 1000; // 5 min
+
+        const interval = setInterval(async () => {
+          if (Date.now() - started > TIMEOUT) {
+            clearInterval(interval);
+            await fetch(`/api/wallet/session?token=${token}`, { method: "DELETE" });
+            reject(new Error("Connection timed out. Please try again."));
+            return;
+          }
+
+          try {
+            const res = await fetch(`/api/wallet/session?token=${token}`);
+            const json = await res.json() as { status: string; address?: string };
+
+            if (json.status === "resolved" && json.address) {
+              clearInterval(interval);
+              resolve(json.address);
+            } else if (json.status === "expired") {
+              clearInterval(interval);
+              reject(new Error("Session expired. Please try again."));
+            }
+            // "pending" → keep polling
+          } catch {
+            // network hiccup — keep polling
+          }
+        }, 2000);
+      });
+
+      const nextConnection: WalletConnection = {
+        address,
+        network: expectedNetwork,
+        walletType: "Freighter",
+        connectedAt: new Date().toISOString(),
+      };
+
+      setConnection(nextConnection);
+      await syncWalletToSupabase(nextConnection.address, nextConnection.network, true, "Freighter");
+      window.localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(nextConnection));
+    } catch (mobileError) {
+      setError(
+        mobileError instanceof Error
+          ? mobileError.message
+          : "Mobile Freighter connection failed.",
+      );
+    } finally {
+      setIsConnecting(false);
+    }
+  }, [expectedNetwork, syncWalletToSupabase]);
 
   const disconnect = useCallback(async () => {
     if (connection) {
@@ -359,6 +469,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       connect,
       connectManual,
       connectTestnetDemo,
+      connectMobileFreighter,
       disconnect,
       getAddress,
       getNetwork: getConnectedNetwork,
@@ -366,6 +477,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       warning: getWalletWarning(connection?.network, expectedNetwork),
       error,
       isFreighterAvailable,
+      isMobile,
       isConnecting,
       balanceVersion,
       refreshBalance,
@@ -374,6 +486,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       connect,
       connectManual,
       connectTestnetDemo,
+      connectMobileFreighter,
       connection,
       disconnect,
       error,
@@ -382,6 +495,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       getConnectedNetwork,
       isConnecting,
       isFreighterAvailable,
+      isMobile,
       signTransaction,
       balanceVersion,
       refreshBalance,

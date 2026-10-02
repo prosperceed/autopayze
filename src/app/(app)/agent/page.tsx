@@ -240,6 +240,8 @@ export default function AgentPage() {
           ),
         );
 
+        refreshBalance();
+
         notify({
           type: "success",
           title: "Schedule created!",
@@ -509,6 +511,29 @@ export default function AgentPage() {
                         >
                           View on Explorer
                           <ExternalLink className="h-2.5 sm:h-3 w-2.5 sm:w-3" />
+                        </a>
+                      </div>
+                    )}
+
+                    {item.status === "executed" && !item.txHash && item.action === "schedule_payment" && (
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-2 rounded-lg border border-violet-500/30 bg-violet-500/10 p-2 sm:p-2.5 text-[10px] sm:text-xs text-violet-700 dark:text-violet-300">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 sm:h-4 w-3.5 sm:w-4 shrink-0 text-violet-600 dark:text-violet-400" />
+                          <span>
+                            Scheduled{item.details?.frequency && item.details.frequency !== "once"
+                              ? ` · ${String(item.details.frequency)}`
+                              : ""}
+                            {item.details?.startAt
+                              ? ` · first run ${new Date(String(item.details.startAt)).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`
+                              : ""}
+                          </span>
+                        </div>
+                        <a
+                          href="/schedules"
+                          className="inline-flex items-center gap-1 font-medium underline hover:text-foreground text-[9px] sm:text-xs whitespace-nowrap"
+                        >
+                          View in Schedules
+                          <ArrowRight className="h-2.5 sm:h-3 w-2.5 sm:w-3" />
                         </a>
                       </div>
                     )}

@@ -52,25 +52,8 @@ export function AppHeader({
 						className="flex items-center gap-2 md:hidden"
 						aria-label="Autopayze dashboard"
 					>
-						<span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-							<svg
-								width="14"
-								height="14"
-								viewBox="0 0 24 24"
-								fill="none"
-								aria-hidden="true"
-							>
-								<path
-									d="M4 12L10 18L20 6"
-									stroke="currentColor"
-									strokeWidth="3"
-									strokeLinecap="round"
-									strokeLinejoin="round"
-								/>
-							</svg>
-						</span>
-						<span className="font-display text-base font-semibold tracking-tight">
-							Autopayze
+						<span className="flex h-24 w-auto items-center justify-center ">
+							<AutoPayzeLogo className="h-full w-auto" />
 						</span>
 					</Link>
 					{title && (

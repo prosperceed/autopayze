@@ -93,20 +93,24 @@ export async function updateTransactionStatus({
   status: 'executed' | 'failed' | 'accepted' | 'rejected';
   txHash?: string;
 }): Promise<{ updated: boolean; error?: string }> {
+  // transactionId is required to safely update a specific row.
+  // Without it we cannot determine which row to update, so we skip the DB write.
+  if (!transactionId) {
+    console.warn('updateTransactionStatus: no transactionId provided, skipping update');
+    return { updated: false, error: 'No transactionId provided' };
+  }
+
   try {
     const supabase = await getDbClient();
-    let query = supabase.from('agent_transactions').update({
-      status,
-      ...(txHash ? { tx_hash: txHash } : {}),
-    });
+    const { error } = await supabase
+      .from('agent_transactions')
+      .update({
+        status,
+        ...(txHash ? { tx_hash: txHash } : {}),
+      })
+      .eq('id', transactionId)
+      .eq('user_id', userId);
 
-    if (transactionId) {
-      query = query.eq('id', transactionId);
-    } else {
-      query = query.eq('user_id', userId).order('created_at', { ascending: false }).limit(1);
-    }
-
-    const { error } = await query;
     if (error) {
       console.warn('Could not update transaction status in Supabase:', error.message || error);
       return { updated: false, error: error.message };
