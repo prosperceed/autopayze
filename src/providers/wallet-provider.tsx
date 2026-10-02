@@ -7,6 +7,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  startTransition,
   type ReactNode,
 } from "react";
 import {
@@ -89,8 +90,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const hasFreighter = Boolean(
         (window as unknown as { freighter?: unknown }).freighter,
       );
-      setIsFreighterAvailable(hasFreighter);
-      setIsMobile(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
+      startTransition(() => {
+        setIsFreighterAvailable(hasFreighter);
+        setIsMobile(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
+      });
     }
   }, []);
 

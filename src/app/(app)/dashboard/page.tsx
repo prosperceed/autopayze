@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, startTransition } from "react";
 import { Wallet, Repeat, Gift, Activity as ActivityIcon, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
@@ -65,7 +65,7 @@ export default function DashboardPage() {
   // Fetch dashboard stats; re-run when wallet connects
   useEffect(() => {
     if (!isConnected) {
-      setStats({ activeSchedules: 0, airdropsSent: 0, monthlyTxCount: 0 });
+      startTransition(() => setStats({ activeSchedules: 0, airdropsSent: 0, monthlyTxCount: 0 }));
       return;
     }
 

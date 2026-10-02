@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  startTransition,
   type ReactNode,
 } from "react";
 import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
@@ -88,8 +89,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     try {
       const parsed = JSON.parse(pending) as Notification;
       if (!parsed?.title) return;
-      setDuration(4500);
-      setNotification(parsed);
+      startTransition(() => {
+        setDuration(4500);
+        setNotification(parsed);
+      });
     } catch {
       window.sessionStorage.removeItem(STORAGE_KEY);
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, startTransition } from "react";
 import {
   Bot,
   Sparkles,
@@ -66,7 +66,10 @@ export default function AgentPage() {
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(SESSION_STORAGE_KEY);
-      if (stored) setHistory(JSON.parse(stored));
+      if (stored) {
+        const parsed = JSON.parse(stored) as SessionItem[];
+        startTransition(() => setHistory(parsed));
+      }
     } catch {
       // ignore
     }

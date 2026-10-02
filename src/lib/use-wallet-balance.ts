@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, startTransition } from "react";
 import { getHorizonClient } from "@/lib/stellar/client";
 import type { StellarNetwork } from "@/lib/stellar/client";
 
@@ -35,9 +35,11 @@ export function useWalletBalance(
 
   useEffect(() => {
     if (!address || !network) {
-      setBalances([]);
-      setError(null);
-      setLoading(false);
+      startTransition(() => {
+        setBalances([]);
+        setError(null);
+        setLoading(false);
+      });
       return;
     }
 
