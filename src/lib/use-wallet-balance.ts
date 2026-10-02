@@ -24,13 +24,13 @@ const POLL_INTERVAL_MS = 30_000;
 export function useWalletBalance(
   address: string | null,
   network: string | null,
+  version?: number,
 ): UseWalletBalanceResult {
   const [balances, setBalances] = useState<WalletBalance[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // stable ref so the interval closure always calls the latest fetch
   const fetchRef = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {
@@ -71,7 +71,7 @@ export function useWalletBalance(
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [address, network]);
+  }, [address, network, version]);
 
   const xlmBalance = balances.find((b) => b.asset === "native")?.balance ?? null;
 

@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const { xlmBalance, loading: balanceLoading, lastUpdated, refresh } = useWalletBalance(
     connection?.address ?? null,
     connection?.network ?? null,
+    undefined,
   );
 
   const [stats, setStats] = useState<ActivityStats>({ activeSchedules: 0, airdropsSent: 0, monthlyTxCount: 0 });

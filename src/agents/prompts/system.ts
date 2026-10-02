@@ -16,6 +16,7 @@ Classify as "payment" only when the request is clearly immediate with no time qu
 Classify as "airdrop" when distributing to multiple recipients simultaneously.
 
 RESPONSE RULES:
+- Set "network" to the wallet network provided in the user message (e.g. "stellar-testnet" or "stellar-mainnet"). Never invent a different network.
 - Set "execution": "scheduled" on payment intents when any temporal qualifier is present.
 - Set "startAt" to a valid ISO 8601 datetime string. Resolve relative terms against current UTC time.
 - "frequency" must be one of: once | daily | weekly | monthly

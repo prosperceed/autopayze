@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useNotification } from "@/components/ui/notification";
 import { WalletConnectButton } from "@/components/wallet/wallet-connect-button";
+import AutoPayzeLogo from "../ui/AutoPayzeLogo";
 
 export function AppHeader({
 	title,
@@ -112,7 +113,9 @@ export function AppHeader({
 								className="font-display text-base font-semibold"
 								onClick={() => setOpen(false)}
 							>
-								Autopayze
+								<span className="flex h-24 w-auto items-center justify-center ">
+									<AutoPayzeLogo className="h-full w-auto" />
+								</span>
 							</Link>
 							<button
 								type="button"

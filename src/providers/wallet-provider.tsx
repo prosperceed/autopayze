@@ -46,6 +46,8 @@ export type WalletContextValue = {
   error: string | null;
   isFreighterAvailable: boolean;
   isConnecting: boolean;
+  balanceVersion: number;
+  refreshBalance: () => void;
 };
 
 const WalletContext = createContext<WalletContextValue | null>(null);
@@ -77,6 +79,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isFreighterAvailable, setIsFreighterAvailable] = useState(false);
+  const [balanceVersion, setBalanceVersion] = useState(0);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -270,6 +273,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const getAddress = useCallback(() => connection?.address ?? null, [connection]);
   const getConnectedNetwork = useCallback(() => connection?.network ?? null, [connection]);
 
+  const refreshBalance = useCallback(() => setBalanceVersion((v) => v + 1), []);
+
   const signTransaction = useCallback(
     async (transactionXdr: string): Promise<string | null> => {
       if (!connection) return null;
@@ -278,13 +283,28 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         connection.network as "stellar-testnet" | "stellar-mainnet",
       );
 
-      // If connected via Freighter extension, use Freighter API
+      // If connected via Freighter extension, use Freighter API.
+      // Do NOT pass `address` — passing it causes Freighter to enforce that the
+      // active Freighter account matches exactly, and if there is any mismatch
+      // the signed XDR will have a wrong key which Stellar rejects as tx_bad_auth.
+      // We only pass networkPassphrase so Freighter signs with whatever key is active.
       if (connection.walletType === "Freighter") {
         const result = await signFreighterTransaction(transactionXdr, {
-          address: connection.address,
           networkPassphrase: networkConfig.networkPassphrase,
         });
-        return result.error ? null : result.signedTxXdr;
+        if (result.error) return null;
+        // Guard: make sure Freighter signed with the expected source account.
+        // If the user has a different account active in Freighter the signature
+        // would be valid for a different key and Stellar would return tx_bad_auth.
+        if (
+          result.signerAddress &&
+          result.signerAddress !== connection.address
+        ) {
+          throw new Error(
+            `Freighter signed with ${result.signerAddress.slice(0, 6)}… but your connected wallet is ${connection.address.slice(0, 6)}…. Switch the active account in Freighter to match and try again.`,
+          );
+        }
+        return result.signedTxXdr;
       }
 
       // If connected with stored keypair (e.g. Testnet demo or manual with secret), sign directly
@@ -305,14 +325,25 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // If no secret key is in session, attempt Freighter fallback
+      // If no secret key is in session, attempt Freighter fallback.
+      // Same rule: omit `address` to avoid tx_bad_auth from a signer mismatch.
       try {
         const result = await signFreighterTransaction(transactionXdr, {
-          address: connection.address,
           networkPassphrase: networkConfig.networkPassphrase,
         });
-        return result.error ? null : result.signedTxXdr;
-      } catch {
+        if (result.error) {
+          throw new Error(
+            "No signing key available for this wallet. On mobile, use 'Testnet Demo Wallet' for full signing & execution, or sign via an external Stellar wallet.",
+          );
+        }
+        if (result.signerAddress && result.signerAddress !== connection.address) {
+          throw new Error(
+            `Freighter signed with ${result.signerAddress.slice(0, 6)}… but your connected wallet is ${connection.address.slice(0, 6)}…. Switch the active account in Freighter to match and try again.`,
+          );
+        }
+        return result.signedTxXdr;
+      } catch (fallbackErr) {
+        if (fallbackErr instanceof Error) throw fallbackErr;
         throw new Error(
           "No signing key available for this wallet. On mobile, use 'Testnet Demo Wallet' for full signing & execution, or sign via an external Stellar wallet.",
         );
@@ -336,6 +367,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       error,
       isFreighterAvailable,
       isConnecting,
+      balanceVersion,
+      refreshBalance,
     }),
     [
       connect,
@@ -350,6 +383,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       isConnecting,
       isFreighterAvailable,
       signTransaction,
+      balanceVersion,
+      refreshBalance,
     ],
   );
 
