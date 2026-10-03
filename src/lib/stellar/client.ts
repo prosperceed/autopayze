@@ -20,7 +20,7 @@ export function getNetworkConfig(network: StellarNetwork) {
 }
 
 export function getHorizonClient(network: StellarNetwork) {
-  const { horizonUrl, networkPassphrase } = getNetworkConfig(network);
+  const { horizonUrl } = getNetworkConfig(network);
   return new Horizon.Server(horizonUrl, { allowHttp: false, appName: 'Autopayze' });
 }
 

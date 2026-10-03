@@ -1,5 +1,3 @@
-import type { StellarNetwork } from './client';
-
 export const SUPPORTED_STELLAR_NETWORKS = ['stellar-testnet', 'stellar-mainnet'] as const;
 
 export type SupportedStellarNetwork = (typeof SUPPORTED_STELLAR_NETWORKS)[number];

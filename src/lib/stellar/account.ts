@@ -1,4 +1,3 @@
-import { Horizon } from '@stellar/stellar-sdk';
 import { getHorizonClient, type StellarNetwork } from './client';
 import { isWalletAddressValid } from './wallet';
 

@@ -1,4 +1,4 @@
-import { Account, Horizon, Networks, StrKey } from '@stellar/stellar-sdk';
+import { StrKey } from '@stellar/stellar-sdk';
 import { getHorizonClient, type StellarNetwork } from './client';
 
 export type WalletConnectionState = 'disconnected' | 'connecting' | 'connected' | 'wrong-network' | 'error';
