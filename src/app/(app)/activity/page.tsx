@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { startTransition, useCallback, useEffect, useState } from "react";
 import { Activity, ExternalLink, RefreshCw, Zap, Calendar, Gift, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -73,12 +73,18 @@ export default function ActivityPage() {
   }, []);
 
   useEffect(() => {
-    loadTransactions();
+    startTransition(() => {
+      void loadTransactions();
+    });
 
     const supabase = createClient();
     const channel = supabase
       .channel("activity_realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "agent_transactions" }, loadTransactions)
+      .on("postgres_changes", { event: "*", schema: "public", table: "agent_transactions" }, () => {
+        startTransition(() => {
+          void loadTransactions();
+        });
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };

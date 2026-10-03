@@ -9,6 +9,8 @@ export const themeInitScript = `
     var resolved = preference === 'system' ? (systemDark ? 'dark' : 'light') : preference;
     if (resolved === 'dark') {
       document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
   } catch (e) {}
 })();
