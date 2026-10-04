@@ -7,7 +7,7 @@ import {
 } from "@/lib/stellar/transaction";
 import { Keypair, StrKey, TransactionBuilder } from "@stellar/stellar-sdk";
 import { getNetworkConfig } from "@/lib/stellar/client";
-import { decryptSecret } from "@/lib/wallet-secrets";
+import { decryptSecret } from "@/lib/wallet-crypto";
 import { nextRunDate } from "@/lib/schedule-utils";
 import type {
 	ScheduledPaymentRow,
