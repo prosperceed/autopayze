@@ -1,7 +1,10 @@
 "use server";
 
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient as createServerClient } from '@/lib/supabase/server';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 export type AgentHistoryInsert = {
   user_id: string;
@@ -32,15 +35,53 @@ export type AgentTransactionInsert = {
   created_at?: string;
 };
 
-async function getDbClient() {
-  const admin = createAdminClient();
-  if (admin) return admin;
-  return createServerClient();
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the Supabase admin client (service role, bypasses RLS).
+ * createAdminClient() throws with a descriptive message when SUPABASE_SERVICE_ROLE_KEY
+ * or NEXT_PUBLIC_SUPABASE_URL are absent — no null-guard needed here.
+ */
+function getDbClient() {
+  return createAdminClient();
 }
 
-export async function savePromptHistory(entry: AgentHistoryInsert): Promise<{ id?: string; recorded: boolean; error?: string }> {
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Guards against a Stellar public key (56-char 'G...' string) accidentally
+ * landing in the user_id column (which is typed uuid in Postgres). This would
+ * produce "invalid input syntax for type uuid" and a 500 from Supabase.
+ *
+ * The root cause can be a mis-destructured request body in the API route
+ * (e.g. body.wallet.address bleeding into user_id). Fail loudly here so the
+ * call-site error is actionable rather than a cryptic DB constraint violation.
+ */
+function assertUuid(value: string, fieldName: string): void {
+  if (!UUID_RE.test(value)) {
+    throw new Error(
+      `agent-history: "${fieldName}" must be a UUID but received "${value}". ` +
+        `A Stellar wallet address was likely passed where the authenticated user ID was expected. ` +
+        `Ensure user.id (from supabase.auth.getUser()) is used, not wallet_address.`,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+export async function savePromptHistory(
+  entry: AgentHistoryInsert,
+): Promise<{ id?: string; recorded: boolean; error?: string }> {
   try {
-    const supabase = await getDbClient();
+    // Catch field-mapping mistakes before they hit the database.
+    assertUuid(entry.user_id, 'user_id');
+
+    const supabase = getDbClient();
     const { data, error } = await supabase
       .from('agent_prompt_history')
       .insert(entry)
@@ -48,8 +89,12 @@ export async function savePromptHistory(entry: AgentHistoryInsert): Promise<{ id
       .maybeSingle();
 
     if (error) {
-      console.warn('Could not save prompt history to Supabase:', error.message || error);
-      return { recorded: false, error: error.message || 'Database insert failed' };
+      console.warn('Could not save prompt history to Supabase:', {
+        message: error.message,
+        details: (error as { details?: string }).details ?? null,
+        code: (error as { code?: string }).code ?? null,
+      });
+      return { recorded: false, error: error.message ?? 'Database insert failed' };
     }
 
     return { id: data?.id, recorded: true };
@@ -60,9 +105,14 @@ export async function savePromptHistory(entry: AgentHistoryInsert): Promise<{ id
   }
 }
 
-export async function saveTransactionHistory(entry: AgentTransactionInsert): Promise<{ id?: string; recorded: boolean; error?: string }> {
+export async function saveTransactionHistory(
+  entry: AgentTransactionInsert,
+): Promise<{ id?: string; recorded: boolean; error?: string }> {
   try {
-    const supabase = await getDbClient();
+    // Catch field-mapping mistakes before they hit the database.
+    assertUuid(entry.user_id, 'user_id');
+
+    const supabase = getDbClient();
     const { data, error } = await supabase
       .from('agent_transactions')
       .insert(entry)
@@ -70,8 +120,12 @@ export async function saveTransactionHistory(entry: AgentTransactionInsert): Pro
       .maybeSingle();
 
     if (error) {
-      console.warn('Could not save transaction history to Supabase:', error.message || error);
-      return { recorded: false, error: error.message || 'Database insert failed' };
+      console.warn('Could not save transaction history to Supabase:', {
+        message: error.message,
+        details: (error as { details?: string }).details ?? null,
+        code: (error as { code?: string }).code ?? null,
+      });
+      return { recorded: false, error: error.message ?? 'Database insert failed' };
     }
 
     return { id: data?.id, recorded: true };
@@ -101,7 +155,9 @@ export async function updateTransactionStatus({
   }
 
   try {
-    const supabase = await getDbClient();
+    assertUuid(userId, 'userId');
+
+    const supabase = getDbClient();
     const { error } = await supabase
       .from('agent_transactions')
       .update({
@@ -112,7 +168,11 @@ export async function updateTransactionStatus({
       .eq('user_id', userId);
 
     if (error) {
-      console.warn('Could not update transaction status in Supabase:', error.message || error);
+      console.warn('Could not update transaction status in Supabase:', {
+        message: error.message,
+        details: (error as { details?: string }).details ?? null,
+        code: (error as { code?: string }).code ?? null,
+      });
       return { updated: false, error: error.message };
     }
 
@@ -126,7 +186,9 @@ export async function updateTransactionStatus({
 
 export async function getUserAgentHistory(userId: string) {
   try {
-    const supabase = await getDbClient();
+    assertUuid(userId, 'userId');
+
+    const supabase = getDbClient();
     const { data, error } = await supabase
       .from('agent_transactions')
       .select('*')
@@ -138,7 +200,7 @@ export async function getUserAgentHistory(userId: string) {
       return [];
     }
 
-    return data || [];
+    return data ?? [];
   } catch {
     return [];
   }
