@@ -2,21 +2,23 @@ import { Horizon, Networks } from '@stellar/stellar-sdk';
 
 export type StellarNetwork = 'stellar-testnet' | 'stellar-mainnet';
 
-export function getNetworkConfig(network: StellarNetwork) {
-  const config = {
-    'stellar-testnet': {
-      networkPassphrase: Networks.TESTNET,
-      horizonUrl: process.env.NEXT_PUBLIC_STELLAR_HORIZON_URL ?? 'https://horizon-testnet.stellar.org',
-      rpcUrl: process.env.NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL ?? 'https://soroban-testnet.stellar.org',
-    },
-    'stellar-mainnet': {
-      networkPassphrase: Networks.PUBLIC,
-      horizonUrl: process.env.NEXT_PUBLIC_STELLAR_HORIZON_URL ?? 'https://horizon.stellar.org',
-      rpcUrl: process.env.NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL ?? 'https://soroban.stellar.org',
-    },
-  } satisfies Record<StellarNetwork, { networkPassphrase: string; horizonUrl: string; rpcUrl: string }>;
+function requireEnv(key: string): string {
+  const value = process.env[key];
+  if (!value) throw new Error(`Missing required environment variable: ${key}`);
+  return value;
+}
 
-  return config[network];
+export function getNetworkConfig(network: StellarNetwork) {
+  const passphrases: Record<StellarNetwork, string> = {
+    'stellar-testnet': Networks.TESTNET,
+    'stellar-mainnet': Networks.PUBLIC,
+  };
+
+  return {
+    networkPassphrase: passphrases[network],
+    horizonUrl: requireEnv('NEXT_PUBLIC_STELLAR_HORIZON_URL'),
+    rpcUrl: requireEnv('NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL'),
+  };
 }
 
 export function getHorizonClient(network: StellarNetwork) {
