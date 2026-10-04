@@ -24,10 +24,14 @@ export function getNetworkConfig(network: StellarNetwork) {
     'stellar-mainnet': Networks.PUBLIC,
   };
 
+  // networkPassphrase is derived from the static Networks enum — no env var
+  // needed. horizonUrl and rpcUrl are lazy getters so callers that only need
+  // the passphrase (e.g. TransactionBuilder in tests) do not pay the env-var
+  // validation cost.
   return {
     networkPassphrase: passphrases[network],
-    horizonUrl: getHorizonUrl(),
-    rpcUrl: getSorobanRpcUrl(),
+    get horizonUrl() { return getHorizonUrl(); },
+    get rpcUrl() { return getSorobanRpcUrl(); },
   };
 }
 

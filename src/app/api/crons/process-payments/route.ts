@@ -5,8 +5,9 @@ import {
 	buildPaymentTransaction,
 	submitPaymentTransaction,
 } from "@/lib/stellar/transaction";
-import { Keypair, TransactionBuilder } from "@stellar/stellar-sdk";
+import { Keypair, StrKey, TransactionBuilder } from "@stellar/stellar-sdk";
 import { getNetworkConfig } from "@/lib/stellar/client";
+import { decryptSecret } from "@/lib/wallet-secrets";
 import { nextRunDate } from "@/lib/schedule-utils";
 import type {
 	ScheduledPaymentRow,
@@ -19,16 +20,15 @@ export const maxDuration = 60;
 
 // ---------------------------------------------------------------------------
 // Module-level environment guardrails
-// These run once at cold-start (module evaluation time in the Node.js runtime).
-// A missing variable throws immediately so the misconfiguration surfaces in
-// deployment logs rather than appearing as a cryptic 500 during the first
-// invocation.
+// Runs once at cold-start. A missing variable throws immediately so
+// misconfiguration surfaces in deployment logs before any request is served.
 // ---------------------------------------------------------------------------
 (function validateEnv() {
 	const required: string[] = [
 		"CRON_SECRET",
 		"NEXT_PUBLIC_SUPABASE_URL",
 		"SUPABASE_SERVICE_ROLE_KEY",
+		"WALLET_ENCRYPTION_KEY",
 	];
 	const missing = required.filter((key) => !process.env[key]);
 	if (missing.length > 0) {
@@ -42,23 +42,23 @@ export const maxDuration = 60;
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
 type RunResult = {
 	scheduleId: string;
 	status: "executed" | "failed" | "skipped";
 	txHash?: string;
 	error?: string;
+	/** Horizon result_codes surfaced when on-chain submission is rejected */
+	resultCodes?: {
+		transaction?: string;
+		operations?: string[];
+	};
 };
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Reads a required environment variable. Throws with a descriptive message if
- * the variable is absent — used inside request handlers where the module-level
- * guard has already run, but an explicit check keeps TypeScript happy and
- * prevents accidental undefined propagation.
- */
 function requireEnv(key: string): string {
 	const value = process.env[key];
 	if (!value) throw new Error(`Missing required environment variable: ${key}`);
@@ -69,17 +69,18 @@ function requireEnv(key: string): string {
  * Atomically transitions all due 'active' rows to 'processing', claiming them
  * for this invocation and preventing double-execution across concurrent cron
  * calls.
- *
- * Returns a clean { ok, data, error } shape instead of throwing so the caller
- * can log the full Supabase error payload (message, details, code, hint)
- * before deciding how to surface the failure.
  */
 async function claimPendingSchedules(): Promise<{
 	ok: boolean;
 	data: ScheduledPaymentRow[];
-	error?: { message: string; details: string | null; code: string | null; hint: string | null };
+	error?: {
+		message: string;
+		details: string | null;
+		code: string | null;
+		hint: string | null;
+	};
 }> {
-	const supabase = createAdminClient(); // throws if env vars are missing
+	const supabase = createAdminClient();
 	const now = new Date().toISOString();
 
 	const { data, error } = await supabase
@@ -90,8 +91,6 @@ async function claimPendingSchedules(): Promise<{
 		.select("*");
 
 	if (error) {
-		// Log every field Supabase exposes so the root cause is visible in
-		// server logs without requiring a database query post-mortem.
 		console.error("[process-payments] claimPendingSchedules DB error:", {
 			message: error.message,
 			details: (error as { details?: string | null }).details ?? null,
@@ -114,23 +113,96 @@ async function claimPendingSchedules(): Promise<{
 	return { ok: true, data: (data ?? []) as ScheduledPaymentRow[] };
 }
 
+/**
+ * Fetches the encrypted_secret from wallet_secrets and decrypts it to a raw
+ * Stellar 'S...' secret key.
+ *
+ * Returns null with a reason string if the secret is unavailable or cannot be
+ * decrypted — the caller must treat this as a skippable (not failed) run so
+ * the schedule is reverted to 'active' and retried next cycle.
+ */
 async function resolveSigningKey(
 	walletAddress: string,
 	userId: string,
-): Promise<string | null> {
+): Promise<{ secret: string } | { secret: null; reason: string }> {
 	try {
 		const supabase = createAdminClient();
 
-		const { data } = await supabase
+		const { data, error } = await supabase
 			.from("wallet_secrets")
 			.select("encrypted_secret")
 			.eq("wallet_address", walletAddress)
 			.eq("user_id", userId)
 			.maybeSingle();
 
-		return data?.encrypted_secret ?? null;
-	} catch {
-		return null;
+		if (error) {
+			console.warn("[process-payments] resolveSigningKey DB error:", error.message);
+			return { secret: null, reason: `DB error reading wallet secret: ${error.message}` };
+		}
+
+		if (!data?.encrypted_secret) {
+			return {
+				secret: null,
+				reason: "No signing key stored. Wallet must be re-connected to enable autonomous execution.",
+			};
+		}
+
+		// Decrypt the stored ciphertext back to the raw 'S...' secret key.
+		let rawSecret: string;
+		try {
+			rawSecret = decryptSecret(data.encrypted_secret);
+		} catch (decryptErr) {
+			const msg = decryptErr instanceof Error ? decryptErr.message : String(decryptErr);
+			console.error("[process-payments] resolveSigningKey decryption failed:", msg);
+			return {
+				secret: null,
+				reason: `Signing key decryption failed: ${msg}. Re-submit the wallet secret to fix this.`,
+			};
+		}
+
+		// Validate the decrypted value is a proper Stellar secret key before
+		// passing it to Keypair.fromSecret(). An invalid key would throw a
+		// confusing low-level error — better to surface it clearly here.
+		if (!StrKey.isValidEd25519SecretSeed(rawSecret)) {
+			console.error(
+				"[process-payments] resolveSigningKey: decrypted value is not a valid Stellar secret key",
+				`(wallet: ${walletAddress})`,
+			);
+			return {
+				secret: null,
+				reason:
+					"Stored signing key is not a valid Stellar secret key after decryption. " +
+					"Re-submit the wallet secret to fix this.",
+			};
+		}
+
+		return { secret: rawSecret };
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		console.error("[process-payments] resolveSigningKey unexpected error:", msg);
+		return { secret: null, reason: `Unexpected error resolving signing key: ${msg}` };
+	}
+}
+
+async function revertToActive(id: string): Promise<void> {
+	try {
+		const supabase = createAdminClient();
+		const { error } = await supabase
+			.from("scheduled_payments")
+			.update({ status: "active" })
+			.eq("id", id);
+
+		if (error) {
+			console.warn(
+				`[process-payments] revertToActive failed for schedule ${id}:`,
+				error.message,
+			);
+		}
+	} catch (err) {
+		console.warn(
+			`[process-payments] revertToActive exception for schedule ${id}:`,
+			err instanceof Error ? err.message : String(err),
+		);
 	}
 }
 
@@ -178,30 +250,48 @@ async function markFailed(id: string, errorMessage: string): Promise<void> {
 		.eq("id", id);
 }
 
+// ---------------------------------------------------------------------------
+// Core execution
+// ---------------------------------------------------------------------------
+
 async function executeSchedule(
 	schedule: ScheduledPaymentRow,
 ): Promise<RunResult> {
 	const network = schedule.wallet_network as StellarNetwork;
 
-	try {
-		const secret = await resolveSigningKey(
-			schedule.wallet_address,
-			schedule.user_id,
+	// ------------------------------------------------------------------
+	// 1. Resolve and decrypt the signing key.
+	//    A missing/undecryptable key is a skippable failure — revert to
+	//    'active' so the schedule is retried on the next cron cycle rather
+	//    than permanently marked 'failed'.
+	// ------------------------------------------------------------------
+	const keyResult = await resolveSigningKey(
+		schedule.wallet_address,
+		schedule.user_id,
+	);
+
+	if (keyResult.secret === null) {
+		console.warn(
+			`[process-payments] skipping schedule ${schedule.id}: ${keyResult.reason}`,
 		);
-		if (!secret) {
-			// Revert to 'active' so this schedule is retried on the next cron run.
-			await createAdminClient()
-				.from("scheduled_payments")
-				.update({ status: "active" })
-				.eq("id", schedule.id);
 
-			return {
-				scheduleId: schedule.id,
-				status: "skipped",
-				error: "No signing key available. Wallet must be re-connected.",
-			};
-		}
+		// Revert to 'active' so we retry next cycle.
+		await revertToActive(schedule.id);
 
+		return {
+			scheduleId: schedule.id,
+			status: "skipped",
+			error: keyResult.reason,
+		};
+	}
+
+	const rawSecret = keyResult.secret;
+
+	try {
+		// ------------------------------------------------------------------
+		// 2. Build the transaction (includes account existence + trustline
+		//    pre-flights inside buildPaymentTransaction).
+		// ------------------------------------------------------------------
 		const draft = await buildPaymentTransaction({
 			sourceAddress: schedule.wallet_address,
 			destinationAddress: schedule.recipient,
@@ -211,18 +301,39 @@ async function executeSchedule(
 			memo: schedule.memo ?? null,
 		});
 
+		// ------------------------------------------------------------------
+		// 3. Sign the transaction.
+		//    Keypair.fromSecret() is safe here — StrKey.isValidEd25519SecretSeed()
+		//    already validated rawSecret in resolveSigningKey().
+		// ------------------------------------------------------------------
 		const networkConfig = getNetworkConfig(network);
-		const keypair = Keypair.fromSecret(secret);
+		const keypair = Keypair.fromSecret(rawSecret);
 		const tx = TransactionBuilder.fromXDR(
 			draft.xdr,
 			networkConfig.networkPassphrase,
 		);
 		tx.sign(keypair);
 
+		// ------------------------------------------------------------------
+		// 4. Submit and evaluate the result.
+		// ------------------------------------------------------------------
 		const result = await submitPaymentTransaction(tx.toXDR(), network);
-		if (!result.successful)
-			throw new Error(result.error ?? "Submission failed");
 
+		if (!result.successful) {
+			// Horizon rejected the transaction — mark as failed with full codes.
+			const errorDetail =
+				result.resultCodes
+					? `Horizon rejected: ${JSON.stringify(result.resultCodes)}`
+					: (result.error ?? "Submission failed");
+
+			throw Object.assign(new Error(errorDetail), {
+				resultCodes: result.resultCodes,
+			});
+		}
+
+		// ------------------------------------------------------------------
+		// 5. Advance schedule state on success.
+		// ------------------------------------------------------------------
 		await markCompleted(
 			schedule.id,
 			result.hash,
@@ -232,24 +343,49 @@ async function executeSchedule(
 			schedule.end_at,
 		);
 
-		return { scheduleId: schedule.id, status: "executed", txHash: result.hash };
+		console.log(
+			`[process-payments] executed schedule ${schedule.id} → tx ${result.hash}`,
+		);
+
+		return {
+			scheduleId: schedule.id,
+			status: "executed",
+			txHash: result.hash,
+		};
 	} catch (err) {
 		const msg = err instanceof Error ? err.message : String(err);
+		const resultCodes =
+			err &&
+			typeof err === "object" &&
+			"resultCodes" in err
+				? (err as { resultCodes?: RunResult["resultCodes"] }).resultCodes
+				: undefined;
+
+		console.error(
+			`[process-payments] schedule ${schedule.id} failed:`,
+			msg,
+			resultCodes ? { resultCodes } : "",
+		);
+
 		await markFailed(schedule.id, msg);
-		return { scheduleId: schedule.id, status: "failed", error: msg };
+
+		return {
+			scheduleId: schedule.id,
+			status: "failed",
+			error: msg,
+			resultCodes,
+		};
 	}
 }
 
 // ---------------------------------------------------------------------------
 // Main cron execution handler
 // ---------------------------------------------------------------------------
+
 async function handleCronExecution(): Promise<NextResponse> {
-	// Claim pending schedules — returns { ok, data, error } instead of throwing
-	// so we can emit structured logs before responding.
 	const claimed = await claimPendingSchedules();
 
 	if (!claimed.ok) {
-		// claimPendingSchedules already logged the DB error fields above.
 		return NextResponse.json(
 			{
 				ok: false,
@@ -288,9 +424,7 @@ async function handleCronExecution(): Promise<NextResponse> {
 }
 
 // ---------------------------------------------------------------------------
-// HTTP handlers — both POST and GET are supported.
-// Vercel Cron and cron-job.org typically use GET; POST is available for
-// manual or webhook-style invocations.
+// HTTP handlers — POST and GET both supported.
 // Both require: Authorization: Bearer <CRON_SECRET>
 // ---------------------------------------------------------------------------
 
