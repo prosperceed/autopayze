@@ -32,7 +32,10 @@ function requireEnv(key: string): string {
 
 async function claimPendingSchedules(): Promise<ScheduledPaymentRow[]> {
 	const supabase = createAdminClient();
-	if (!supabase) throw new Error("Admin client unavailable");
+	if (!supabase)
+		throw new Error(
+			"Admin client unavailable. Check SUPABASE_SERVICE_ROLE_KEY.",
+		);
 
 	const now = new Date().toISOString();
 
@@ -53,17 +56,21 @@ async function resolveSigningKey(
 	walletAddress: string,
 	userId: string,
 ): Promise<string | null> {
-	const supabase = createAdminClient();
-	if (!supabase) return null;
+	try {
+		const supabase = createAdminClient();
+		if (!supabase) return null;
 
-	const { data } = await supabase
-		.from("wallet_secrets")
-		.select("encrypted_secret")
-		.eq("wallet_address", walletAddress)
-		.eq("user_id", userId)
-		.maybeSingle();
+		const { data } = await supabase
+			.from("wallet_secrets")
+			.select("encrypted_secret")
+			.eq("wallet_address", walletAddress)
+			.eq("user_id", userId)
+			.maybeSingle();
 
-	return data?.encrypted_secret ?? null;
+		return data?.encrypted_secret ?? null;
+	} catch {
+		return null;
+	}
 }
 
 async function markCompleted(
@@ -175,80 +182,73 @@ async function executeSchedule(
 }
 
 async function handleCronExecution(): Promise<NextResponse> {
-	let claimed: ScheduledPaymentRow[];
 	try {
-		claimed = await claimPendingSchedules();
+		const claimed = await claimPendingSchedules();
+
+		if (claimed.length === 0) {
+			return NextResponse.json({ ok: true, ran: 0, results: [] });
+		}
+
+		const results: RunResult[] = [];
+		for (const schedule of claimed) {
+			results.push(await executeSchedule(schedule));
+		}
+
+		const executed = results.filter((r) => r.status === "executed").length;
+		const failed = results.filter((r) => r.status === "failed").length;
+		const skipped = results.filter((r) => r.status === "skipped").length;
+
+		console.log(
+			`[process-payments] ran=${claimed.length} executed=${executed} failed=${failed} skipped=${skipped}`,
+		);
+
+		return NextResponse.json({
+			ok: true,
+			ran: claimed.length,
+			executed,
+			failed,
+			skipped,
+			results,
+		});
 	} catch (err) {
 		const msg = err instanceof Error ? err.message : String(err);
-		console.error(`[process-payments] claim error: ${msg}`);
-		return NextResponse.json({ error: msg }, { status: 500 });
+		console.error(`[process-payments] execution error: ${msg}`);
+		return NextResponse.json({ ok: false, error: msg }, { status: 500 });
 	}
-
-	if (claimed.length === 0) {
-		return NextResponse.json({ ok: true, ran: 0, results: [] });
-	}
-
-	const results: RunResult[] = [];
-	for (const schedule of claimed) {
-		results.push(await executeSchedule(schedule));
-	}
-
-	const executed = results.filter((r) => r.status === "executed").length;
-	const failed = results.filter((r) => r.status === "failed").length;
-	const skipped = results.filter((r) => r.status === "skipped").length;
-
-	console.log(
-		`[process-payments] ran=${claimed.length} executed=${executed} failed=${failed} skipped=${skipped}`,
-	);
-
-	return NextResponse.json({
-		ok: true,
-		ran: claimed.length,
-		executed,
-		failed,
-		skipped,
-		results,
-	});
 }
 
 export async function POST(): Promise<NextResponse> {
-	const headersList = await headers();
-	const authHeader = headersList.get("authorization");
-	let cronSecret: string;
-
 	try {
-		cronSecret = requireEnv("CRON_SECRET");
+		const headersList = await headers();
+		const authHeader = headersList.get("authorization");
+		const cronSecret = requireEnv("CRON_SECRET");
+
+		if (authHeader !== `Bearer ${cronSecret}`) {
+			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+		}
+
+		return await handleCronExecution();
 	} catch (err) {
-		return NextResponse.json(
-			{ error: (err as Error).message },
-			{ status: 500 },
-		);
+		const msg = err instanceof Error ? err.message : String(err);
+		console.error(`[process-payments] POST handler error: ${msg}`);
+		return NextResponse.json({ ok: false, error: msg }, { status: 500 });
 	}
-
-	if (authHeader !== `Bearer ${cronSecret}`) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
-
-	return handleCronExecution();
 }
 
 export async function GET(): Promise<NextResponse> {
-	const headersList = await headers();
-	const authHeader = headersList.get("authorization");
-	let cronSecret: string;
-
 	try {
-		cronSecret = requireEnv("CRON_SECRET");
+		const headersList = await headers();
+		const authHeader = headersList.get("authorization");
+		const cronSecret = requireEnv("CRON_SECRET");
+
+		if (authHeader !== `Bearer ${cronSecret}`) {
+			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+		}
+
+		return await handleCronExecution();
 	} catch (err) {
-		return NextResponse.json(
-			{ error: (err as Error).message },
-			{ status: 500 },
-		);
+		const msg = err instanceof Error ? err.message : String(err);
+		console.error(`[process-payments] GET handler error: ${msg}`);
+		return NextResponse.json({ ok: false, error: msg }, { status: 500 });
 	}
-
-	if (authHeader !== `Bearer ${cronSecret}`) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
-
-	return handleCronExecution();
 }
