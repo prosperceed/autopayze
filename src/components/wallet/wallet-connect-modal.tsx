@@ -251,7 +251,7 @@ export function WalletConnectModal({
               <Button
                 type="button"
                 onClick={handleFreighterConnect}
-                disabled={isConnecting || !isFreighterAvailable}
+                disabled={isConnecting}
                 className="w-full h-11 gap-2"
               >
                 {isConnecting ? (
@@ -262,7 +262,16 @@ export function WalletConnectModal({
               </Button>
               {!isFreighterAvailable && (
                 <p className="text-center text-[11px] text-muted-foreground">
-                  On mobile? Use <button type="button" className="underline text-primary" onClick={() => setActiveTab("mobile")}>Freighter Mobile</button> instead.
+                  Extension not detected yet —{" "}
+                  <a
+                    href="https://www.freighter.app"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-primary"
+                  >
+                    install Freighter
+                  </a>{" "}
+                  if needed, then click above or refresh the page.
                 </p>
               )}
             </div>

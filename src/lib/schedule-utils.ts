@@ -32,7 +32,7 @@ export type ScheduledPaymentRow = {
   end_at: string | null;
   occurrences: number | null;
   runs_completed: number;
-  status: "active" | "paused" | "completed" | "failed";
+  status: "active" | "processing" | "paused" | "completed" | "failed";
   last_tx_hash: string | null;
   last_run_at: string | null;
   last_error: string | null;

@@ -20,23 +20,28 @@ export async function upsertWalletSecret(
   secretKey: string,
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    // Use the admin client so we bypass RLS on the insert/upsert.
-    // The admin client is only available server-side.
-    const admin = createAdminClient();
-
-    // Fall back to the authed server client — this works because the user role
-    // has INSERT/UPDATE permission on their own rows.
-    const supabase = admin ?? (await createServerClient());
-
+    // Resolve the authenticated user via the SSR session cookie.
+    // This is called from an API route handler where the request cookies are
+    // available in the Next.js context, so getUser() will succeed as long as
+    // the user has an active session.
+    const serverClient = await createServerClient();
     const {
       data: { user },
-    } = await (await createServerClient()).auth.getUser();
+    } = await serverClient.auth.getUser();
 
     if (!user) {
       return { ok: false, error: "Not authenticated" };
     }
 
-    const { error } = await supabase.from("wallet_secrets").upsert(
+    // Always use the admin client for the write so we bypass RLS entirely.
+    // The admin client is the only way to guarantee the upsert succeeds
+    // regardless of the RLS policy state on wallet_secrets.
+    const admin = createAdminClient();
+    if (!admin) {
+      return { ok: false, error: "Admin client unavailable — check SUPABASE_SERVICE_ROLE_KEY" };
+    }
+
+    const { error } = await admin.from("wallet_secrets").upsert(
       {
         user_id: user.id,
         wallet_address: walletAddress,

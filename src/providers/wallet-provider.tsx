@@ -12,6 +12,7 @@ import {
 } from "react";
 import {
   getNetwork as getFreighterNetwork,
+  isConnected as isConnectedApi,
   requestAccess,
   signTransaction as signFreighterTransaction,
 } from "@stellar/freighter-api";
@@ -93,28 +94,48 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     });
 
     // Freighter injects window.freighter asynchronously after the extension
-    // initialises. Check immediately, then retry a few times with short delays
-    // to catch the common case where the extension loads after React hydration.
+    // initialises. We check the synchronous flag first (fastest path), then
+    // fall back to the async isConnected() API which uses the extension message
+    // bus — this catches cases where window.freighter hasn't been set yet but
+    // the extension is already ready to respond.
+    // We retry for up to ~5 s to handle slow extension startup and page navigations.
+    let cancelled = false;
     let attempts = 0;
-    const MAX_ATTEMPTS = 8;
+    const MAX_ATTEMPTS = 20;   // 20 × 250 ms = 5 s
     const RETRY_DELAY_MS = 250;
 
-    function checkFreighter() {
-      const hasFreighter = Boolean(
+    async function checkFreighter() {
+      if (cancelled) return;
+
+      // Fast path: synchronous flag the extension sets on window
+      const syncFlag = Boolean(
         (window as unknown as { freighter?: unknown }).freighter,
       );
-      if (hasFreighter) {
+      if (syncFlag) {
         startTransition(() => setIsFreighterAvailable(true));
         return;
       }
-      if (attempts < MAX_ATTEMPTS) {
-        attempts++;
-        setTimeout(checkFreighter, RETRY_DELAY_MS);
+
+      // Slow path: ask the extension API (works even before window.freighter is set)
+      try {
+        const result = await isConnectedApi();
+        if (cancelled) return;
+        if (result.isConnected) {
+          startTransition(() => setIsFreighterAvailable(true));
+          return;
+        }
+      } catch {
+        // Extension not ready yet — fall through to retry
       }
-      // After MAX_ATTEMPTS (~2 s) with no extension found, leave as false.
+
+      if (!cancelled && attempts < MAX_ATTEMPTS) {
+        attempts++;
+        setTimeout(() => { void checkFreighter(); }, RETRY_DELAY_MS);
+      }
     }
 
-    checkFreighter();
+    void checkFreighter();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -169,11 +190,28 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setIsConnecting(true);
 
     try {
+      // Re-check availability at connection time in case the detection polling
+      // finished before the extension was fully ready (fast page loads).
+      const syncFlag = Boolean(
+        (window as unknown as { freighter?: unknown }).freighter,
+      );
+      if (!syncFlag) {
+        // Give the async API one last chance before failing.
+        const { isConnected: connected } = await isConnectedApi();
+        if (connected) {
+          startTransition(() => setIsFreighterAvailable(true));
+        } else {
+          throw new Error(
+            "Freighter extension not detected. Make sure it is installed and enabled, then refresh the page and try again.",
+          );
+        }
+      }
+
       const addressResult = await requestAccess();
       if (addressResult.error || !isWalletAddressValid(addressResult.address)) {
         throw new Error(
           addressResult.error
-            ? "Freighter extension was not detected or access was denied. On mobile, use 'Enter Address' or 'Testnet Demo Wallet'."
+            ? "Freighter access was denied. Open the Freighter extension and approve the connection request."
             : "invalidAddress",
         );
       }

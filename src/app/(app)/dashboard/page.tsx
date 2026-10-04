@@ -43,11 +43,11 @@ function StatCard({
 }
 
 export default function DashboardPage() {
-  const { connection, isConnected } = useWallet();
-  const { xlmBalance, loading: balanceLoading, lastUpdated, refresh } = useWalletBalance(
+  const { connection, isConnected, balanceVersion, refreshBalance } = useWallet();
+  const { xlmBalance, loading: balanceLoading, lastUpdated } = useWalletBalance(
     connection?.address ?? null,
     connection?.network ?? null,
-    undefined,
+    balanceVersion,
   );
 
   // Defer wallet-dependent rendering until after hydration to avoid SSR/client
@@ -153,7 +153,7 @@ export default function DashboardPage() {
         {walletConnected && (
           <button
             type="button"
-            onClick={refresh}
+            onClick={refreshBalance}
             disabled={balanceLoading}
             aria-label="Refresh balance"
             className="mt-1 rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-40"

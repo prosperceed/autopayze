@@ -99,6 +99,10 @@ export async function markScheduleFailed(id: string, errorMessage: string): Prom
 
   await supabase
     .from("scheduled_payments")
-    .update({ last_error: errorMessage, last_run_at: new Date().toISOString() })
+    .update({
+      status: "failed",
+      last_error: errorMessage,
+      last_run_at: new Date().toISOString(),
+    })
     .eq("id", id);
 }

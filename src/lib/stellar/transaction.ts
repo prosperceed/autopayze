@@ -101,8 +101,8 @@ export async function buildPaymentTransaction(
     throw new Error('A source and destination wallet are required.');
   }
 
-  const { networkPassphrase, horizonUrl } = getNetworkConfig(network);
-  const server = options.server ?? new Horizon.Server(horizonUrl, { allowHttp: false, appName: 'Autopayze' });
+  const { networkPassphrase } = getNetworkConfig(network);
+  const server = options.server ?? getHorizonClient(network);
 
   let account: Account;
   if (options.sourceAccount) {
