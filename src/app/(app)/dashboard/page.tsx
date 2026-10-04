@@ -50,6 +50,15 @@ export default function DashboardPage() {
     undefined,
   );
 
+  // Defer wallet-dependent rendering until after hydration to avoid SSR/client
+  // mismatch. The server has no access to localStorage so it always renders as
+  // disconnected; the client restores the wallet immediately, causing a diff.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  // Use a safe version of isConnected that is always false on the server.
+  const walletConnected = mounted && isConnected;
+
   const [stats, setStats] = useState<ActivityStats>({ activeSchedules: 0, airdropsSent: 0, monthlyTxCount: 0 });
   const [statsLoading, setStatsLoading] = useState(false);
   const [firstName, setFirstName] = useState("there");
@@ -64,7 +73,7 @@ export default function DashboardPage() {
 
   // Fetch dashboard stats; re-run when wallet connects
   useEffect(() => {
-    if (!isConnected) {
+    if (!walletConnected) {
       startTransition(() => setStats({ activeSchedules: 0, airdropsSent: 0, monthlyTxCount: 0 }));
       return;
     }
@@ -116,17 +125,17 @@ export default function DashboardPage() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [isConnected, connection]);
+  }, [walletConnected, connection]);
 
   const balanceDisplay = balanceLoading && xlmBalance === null
     ? "—"
     : xlmBalance !== null
     ? `${xlmBalance} XLM`
-    : isConnected ? "—" : "—";
+    : walletConnected ? "—" : "—";
 
   const balanceSub = lastUpdated
     ? `Updated ${lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-    : isConnected && !balanceLoading ? undefined : undefined;
+    : walletConnected && !balanceLoading ? undefined : undefined;
 
   return (
     <div className="space-y-4 sm:space-y-6 px-3 sm:px-0">
@@ -136,12 +145,12 @@ export default function DashboardPage() {
             Welcome back, {firstName}
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-            {isConnected
+            {walletConnected
               ? "Your wallet is connected. Balances and activity update live."
               : "Connect your wallet to see live balance and activity."}
           </p>
         </div>
-        {isConnected && (
+        {walletConnected && (
           <button
             type="button"
             onClick={refresh}

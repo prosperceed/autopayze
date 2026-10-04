@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Wallet,
   Sparkles,
@@ -36,9 +36,20 @@ export function WalletConnectModal({
     error,
   } = useWallet();
 
-  // Auto-select best tab: mobile → "mobile", desktop with extension → "freighter", else → "demo"
-  const defaultTab: Tab = isMobile ? "mobile" : isFreighterAvailable ? "freighter" : "demo";
-  const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
+  // Compute the best default tab. Start with "demo" (safe fallback), then
+  // update once the provider resolves isMobile / isFreighterAvailable — which
+  // may happen after the first render because Freighter injects itself async.
+  const [activeTab, setActiveTab] = useState<Tab>("demo");
+  useEffect(() => {
+    // Only auto-select if the user hasn't manually switched tabs yet.
+    setActiveTab((current) => {
+      // If the user already made a deliberate choice, respect it.
+      if (current !== "demo") return current;
+      if (isMobile) return "mobile";
+      if (isFreighterAvailable) return "freighter";
+      return "demo";
+    });
+  }, [isMobile, isFreighterAvailable]);
   const [addressInput, setAddressInput] = useState("");
   const [secretInput, setSecretInput] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);

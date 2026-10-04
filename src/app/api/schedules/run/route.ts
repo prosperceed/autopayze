@@ -14,6 +14,8 @@ import { Keypair, TransactionBuilder } from "@stellar/stellar-sdk";
 import { getNetworkConfig } from "@/lib/stellar/client";
 import type { StellarNetwork } from "@/lib/stellar/client";
 
+export const dynamic = "force-dynamic";
+
 type RunResult = {
   scheduleId: string;
   status: "executed" | "failed" | "skipped";

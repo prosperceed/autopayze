@@ -86,15 +86,35 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [balanceVersion, setBalanceVersion] = useState(0);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window === "undefined") return;
+
+    startTransition(() => {
+      setIsMobile(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
+    });
+
+    // Freighter injects window.freighter asynchronously after the extension
+    // initialises. Check immediately, then retry a few times with short delays
+    // to catch the common case where the extension loads after React hydration.
+    let attempts = 0;
+    const MAX_ATTEMPTS = 8;
+    const RETRY_DELAY_MS = 250;
+
+    function checkFreighter() {
       const hasFreighter = Boolean(
         (window as unknown as { freighter?: unknown }).freighter,
       );
-      startTransition(() => {
-        setIsFreighterAvailable(hasFreighter);
-        setIsMobile(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
-      });
+      if (hasFreighter) {
+        startTransition(() => setIsFreighterAvailable(true));
+        return;
+      }
+      if (attempts < MAX_ATTEMPTS) {
+        attempts++;
+        setTimeout(checkFreighter, RETRY_DELAY_MS);
+      }
+      // After MAX_ATTEMPTS (~2 s) with no extension found, leave as false.
     }
+
+    checkFreighter();
   }, []);
 
   useEffect(() => {

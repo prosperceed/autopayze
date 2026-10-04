@@ -61,6 +61,13 @@ export default function AgentPage() {
   const [history, setHistory] = useState<SessionItem[]>([]);
   const [pendingNetworkPrompt, setPendingNetworkPrompt] = useState<string | null>(null);
 
+  // Defer wallet-dependent rendering until after hydration to avoid SSR/client
+  // mismatch. The server renders without localStorage; the client restores the
+  // wallet on mount, causing a diff if isConnected is used directly in JSX.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const walletConnected = mounted && isConnected;
+
   const scheduleDetection = useMemo(() => detectScheduleIntent(prompt), [prompt]);
 
   useEffect(() => {
@@ -343,7 +350,7 @@ export default function AgentPage() {
 
       <Card className="flex flex-1 flex-col border-border w-full max-w-full">
         <CardContent className="flex flex-1 flex-col p-3 sm:p-4 md:p-6">
-          {!isConnected ? (
+          {!walletConnected ? (
             <div className="flex flex-1 flex-col items-center justify-center py-12">
               <EmptyState
                 icon={Bot}
@@ -607,9 +614,9 @@ export default function AgentPage() {
                 type="text"
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
-                disabled={!isConnected || loading}
+                disabled={!walletConnected || loading}
                 placeholder={
-                  isConnected
+                  walletConnected
                     ? "Ask the agent (e.g., 'Send 1 XLM to GC3P...' or 'Pay weekly…')"
                     : "Connect your wallet above to enable the agent…"
                 }
@@ -622,7 +629,7 @@ export default function AgentPage() {
               />
               <Button
                 type="submit"
-                disabled={!isConnected || loading || !prompt.trim()}
+                disabled={!walletConnected || loading || !prompt.trim()}
                 className="h-9 sm:h-11 w-full sm:w-auto gap-1.5 text-xs sm:text-sm shrink-0"
               >
                 {loading ? (
