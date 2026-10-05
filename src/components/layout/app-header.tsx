@@ -52,7 +52,7 @@ export function AppHeader({
 						className="flex items-center gap-2 md:hidden"
 						aria-label="Autopayze dashboard"
 					>
-						<span className="flex h-16 w-auto items-center justify-center ">
+						<span className="flex h-[66px] w-auto items-center justify-center ">
 							<AutoPayzeLogo className="h-full w-auto" />
 						</span>
 					</Link>
@@ -96,7 +96,7 @@ export function AppHeader({
 								className="font-display text-base font-semibold"
 								onClick={() => setOpen(false)}
 							>
-								<span className="flex h-16 w-auto items-center justify-center ">
+								<span className="flex h-[66px] w-auto items-center justify-center ">
 									<AutoPayzeLogo className="h-full w-auto" />
 								</span>
 							</Link>
