@@ -16,10 +16,10 @@ export function SiteHeader() {
 	const [open, setOpen] = useState(false);
 	return (
 		<header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
-			<div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-				<Link href="/" className="flex items-center gap-2 mb-1 lg:mb-3">
-					<span className="flex h-24 w-auto items-center justify-center ">
-						<AutoPayzeLogo className="h-full w-auto" />
+			<div className="mx-auto flex h-17 max-w-6xl items-center justify-between px-6">
+				<Link href="/" className="flex items-center gap-2 mb-2 md:mb-3">
+					<span className="flex h-24 w-auto items-center justify-center">
+						<AutoPayzeLogo className="h-auto md:h-full w-auto" />
 					</span>
 				</Link>
 

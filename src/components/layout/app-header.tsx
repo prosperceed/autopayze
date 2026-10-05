@@ -52,7 +52,7 @@ export function AppHeader({
 						className="flex items-center gap-2 md:hidden"
 						aria-label="Autopayze dashboard"
 					>
-						<span className="flex h-24 w-auto items-center justify-center ">
+						<span className="flex h-16 w-auto items-center justify-center ">
 							<AutoPayzeLogo className="h-full w-auto" />
 						</span>
 					</Link>
@@ -96,7 +96,7 @@ export function AppHeader({
 								className="font-display text-base font-semibold"
 								onClick={() => setOpen(false)}
 							>
-								<span className="flex h-24 w-auto items-center justify-center ">
+								<span className="flex h-16 w-auto items-center justify-center ">
 									<AutoPayzeLogo className="h-full w-auto" />
 								</span>
 							</Link>
@@ -111,7 +111,7 @@ export function AppHeader({
 						</div>
 
 						{/* Mobile drawer wallet status & connect */}
-						<div className="mb-4 rounded-lg border border-border bg-muted/30 p-3">
+						{/* <div className="mb-4 rounded-lg border border-border bg-muted/30 p-3">
 							<p className="text-xs font-semibold text-muted-foreground mb-2">
 								Wallet
 							</p>
@@ -119,7 +119,7 @@ export function AppHeader({
 								size="sm"
 								className="w-full justify-center"
 							/>
-						</div>
+						</div> */}
 
 						<div
 							className="flex-1 overflow-y-auto"
