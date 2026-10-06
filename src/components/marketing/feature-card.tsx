@@ -9,8 +9,6 @@ export interface FeatureCardProps {
   description: string;
   gradient: string;
   overlayGradient: string;
-  number: string;
-  label: string;
   className?: string;
 }
 
@@ -20,8 +18,6 @@ export function FeatureCard({
   description,
   gradient,
   overlayGradient,
-  number,
-  label,
   className,
 }: FeatureCardProps) {
   return (
@@ -157,14 +153,6 @@ export function FeatureCard({
         </div>
       </div>
 
-      {/* Below-card label row */}
-      <div className="flex items-center gap-2 px-0.5 sm:gap-3 sm:px-1">
-        <span className="text-[10px] font-semibold tabular-nums text-muted-foreground/50 sm:text-xs">
-          {number}
-        </span>
-        <span className="h-px flex-1 bg-border" aria-hidden="true" />
-        <span className="text-[10px] font-medium text-muted-foreground sm:text-xs">{label}</span>
-      </div>
     </div>
   );
 }
