@@ -1,62 +1,35 @@
 import Link from "next/link";
 import {
-  Bot,
-  Gift,
-  Repeat,
-  Wallet as WalletIcon,
   ShieldCheck,
+  LinkIcon,
+  SlidersHorizontal,
+  Zap,
 } from "lucide-react";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { PaymentFlowVisual } from "@/components/marketing/payment-flow-visual";
+import { AgentDashboardMock } from "@/components/marketing/agent-dashboard-mock";
+import { FeaturesSection } from "@/components/marketing/features-section";
 import { buttonVariants } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 
 const steps = [
   {
-    number: "01",
+    icon: LinkIcon,
     title: "Connect your wallet",
     description:
       "Link the wallet you already use. Autopayze reads balances and activity — it never touches funds without a rule you set.",
   },
   {
-    number: "02",
+    icon: SlidersHorizontal,
     title: "Set a payment rule",
     description:
-      "Pick who gets paid, how much, and when: a fixed schedule, a balance threshold, or a one-off transfer.",
+      "Tell the agent who gets paid, how much, and when. It structures the intent and asks before anything is signed.",
   },
   {
-    number: "03",
+    icon: Zap,
     title: "The agent handles the rest",
     description:
-      "Autopayze executes on time, every time, and logs every transaction so you can review it later.",
-  },
-];
-
-const features = [
-  {
-    icon: WalletIcon,
-    title: "Wallet",
-    description:
-      "See balances across chains in one place, with activity that updates as it happens.",
-  },
-  {
-    icon: Repeat,
-    title: "Scheduled payments",
-    description:
-      "Set payroll, rent, or recurring transfers once. Autopayze sends them on time without a reminder from you.",
-  },
-  {
-    icon: Gift,
-    title: "Airdrops",
-    description:
-      "Distribute tokens to a list of addresses in one batch, with a clear record of who received what.",
-  },
-  {
-    icon: Bot,
-    title: "AI agent",
-    description:
-      "Tell the agent the outcome you want. It plans the transactions and asks before anything irreversible happens.",
+      "Autopayze executes on time, every time, and logs every transaction so you can audit it whenever you want.",
   },
 ];
 
@@ -74,8 +47,8 @@ export default function LandingPage() {
             </h1>
             <p className="mt-5 max-w-md text-lg text-muted-foreground">
               Autopayze schedules, sends and tracks crypto payments from your
-              wallet, so recurring transfers and airdrops stop depending on
-              you remembering to do them.
+              wallet, so recurring transfers and airdrops stop depending on you
+              remembering to do them.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <Link href="/signup" className={buttonVariants({ size: "lg" })}>
@@ -99,49 +72,56 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* How it works — a real sequence, so numbering earns its place */}
+        {/* How it works */}
         <section id="how-it-works" className="border-t border-border bg-muted/30">
-          <div className="mx-auto max-w-6xl px-6 py-20">
-            <h2 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              Three steps, then it runs on its own.
-            </h2>
-            <div className="mt-10 grid gap-8 sm:grid-cols-3">
-              {steps.map((step) => (
-                <div key={step.number}>
-                  <span className="font-display text-sm font-semibold text-primary">
-                    {step.number}
-                  </span>
-                  <h3 className="mt-3 text-base font-semibold text-foreground">
-                    {step.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    {step.description}
-                  </p>
-                </div>
-              ))}
+          <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
+            <div className="mx-auto mb-14 max-w-xl text-center">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-primary">
+                Simple steps
+              </p>
+              <h2 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                How it works
+              </h2>
+              <p className="mt-3 text-base text-muted-foreground">
+                No complexity, no watching dashboards. Set a rule once and let
+                Autopayze run it.
+              </p>
+            </div>
+
+            <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
+              <div className="relative mx-auto w-full max-w-md lg:max-w-none">
+                <AgentDashboardMock />
+              </div>
+
+              <div className="relative flex flex-col gap-0">
+                <div
+                  className="absolute left-[19px] top-10 bottom-10 w-px bg-border"
+                  aria-hidden="true"
+                />
+                {steps.map((step, i) => (
+                  <div
+                    key={step.title}
+                    className={`relative flex gap-5 ${i < steps.length - 1 ? "pb-10" : ""}`}
+                  >
+                    <div className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
+                      <step.icon className="h-4 w-4 text-primary" strokeWidth={2} />
+                    </div>
+                    <div className="pt-1.5">
+                      <h3 className="font-display text-base font-semibold text-foreground">
+                        {step.title}
+                      </h3>
+                      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                        {step.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Features */}
-        <section id="features" className="mx-auto max-w-6xl px-6 py-20">
-          <h2 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            Everything a wallet needs to run without you watching it.
-          </h2>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {features.map((feature) => (
-              <Card key={feature.title} className="p-5">
-                <feature.icon className="h-5 w-5 text-primary" />
-                <h3 className="mt-4 text-sm font-semibold text-foreground">
-                  {feature.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {feature.description}
-                </p>
-              </Card>
-            ))}
-          </div>
-        </section>
+        <FeaturesSection />
 
         {/* CTA */}
         <section className="border-t border-border">
@@ -150,9 +130,7 @@ export default function LandingPage() {
               <h2 className="font-display text-2xl font-semibold tracking-tight text-foreground">
                 Set your first payment rule in a few minutes.
               </h2>
-              <p className="mt-2 text-muted-foreground">
-                No card required to try it.
-              </p>
+              <p className="mt-2 text-muted-foreground">No card required to try it.</p>
             </div>
             <Link href="/signup" className={buttonVariants({ size: "lg" })}>
               Get started

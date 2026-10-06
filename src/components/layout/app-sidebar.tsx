@@ -30,7 +30,7 @@ export function AppSidebar() {
 			<div className="flex h-16 items-center px-5">
 				<Link href="/dashboard" className="flex items-center gap-2">
 					<span className="flex h-24 w-auto items-center justify-center ">
-						{/* <AutoPayzeLogo className="h-full w-auto" /> */}
+						<AutoPayzeLogo className="hidden lg:block h-full w-auto" />
 					</span>
 				</Link>
 			</div>

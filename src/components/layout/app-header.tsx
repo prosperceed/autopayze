@@ -52,8 +52,8 @@ export function AppHeader({
 						className="flex items-center gap-2 md:hidden"
 						aria-label="Autopayze dashboard"
 					>
-						<span className="flex h-[66px] w-auto items-center justify-center ">
-							<AutoPayzeLogo className="h-full w-auto" />
+						<span className="flex h-[66px] lg:h-24 w-auto items-center justify-center ">
+							{/* <AutoPayzeLogo className="h-full w-auto" /> */}
 						</span>
 					</Link>
 					{title && (

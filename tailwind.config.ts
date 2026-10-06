@@ -53,6 +53,9 @@ const config: Config = {
         lg: "0.875rem",
         xl: "1.25rem",
       },
+      transitionDuration: {
+        400: "400ms",
+      },
     },
   },
   plugins: [],
