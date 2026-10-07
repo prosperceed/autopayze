@@ -62,6 +62,7 @@ export function FeaturesSection() {
 					deterministic, scheduled, and batch token operations reliable and
 					cost‑efficient. Designed with Stellar primitives in mind — timebounds,
 					sequence management, claimable balances and anchor-friendly flows.
+				</p>
 			</div>
 
 			<div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
