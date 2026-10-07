@@ -1,6 +1,6 @@
 # Autopayze
 
-Autopayze is a Stellar-first payment platform for AI-assisted payment intent orchestration, scheduled transfers, and wallet-based automation. The product is designed around a critical safety boundary: the AI may interpret requests and generate structured payment intents, but it never directly controls keys or executes financial transactions. Deterministic application code and explicit user approval remain the enforcement layer.
+Autopayze is a powerful tool designed to automate financial transactions on the Stellar network, enhancing user experience and operational efficiency.
 
 ## Current status
 
@@ -39,21 +39,21 @@ The structure separates responsibilities between frontend UI, auth, wallet state
 - Vitest
 - pnpm
 
-## Local development
+## Installation
 
-1. Install dependencies:
-   ```bash
-   pnpm install
-   ```
-2. Copy the example environment file:
-   ```bash
-   cp .env.example .env.local
-   ```
-3. Fill in your Supabase environment values.
-4. Run the app:
-   ```bash
-   pnpm dev
-   ```
+To install Autopayze, clone the repository and run:
+
+```bash
+npm install
+```
+
+## Usage
+
+After installation, you can start the application with:
+
+```bash
+npm start
+```
 
 ## Environment variables
 
@@ -103,9 +103,96 @@ In Supabase Auth > Providers > GitHub:
 
 This milestone is intentionally pinned to Stellar Testnet by default. The app checks the wallet network before enabling payment workflows. Wallets connected to the wrong network show a warning state rather than silently assuming safety.
 
+## Stellar Integration
+
+Autopayze uses the Stellar JavaScript SDK and Horizon API to validate accounts, read balances, and construct transactions before submission to a user's wallet for signing. All transaction building respects Stellar's native sequence management, timebounds, and fee strategy.
+
+### Quickstart: Testnet setup
+
+1. Set network to Testnet:
+
+   ```bash
+   NEXT_PUBLIC_STELLAR_NETWORK=testnet
+   NEXT_PUBLIC_STELLAR_HORIZON_URL=https://horizon-testnet.stellar.org
+   NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
+   ```
+
+2. Fund a testnet account via [Friendbot](https://developers.stellar.org/docs/tutorials/create-account):
+
+   ```bash
+   curl "https://friendbot.stellar.org?addr=GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+   ```
+
+3. Connect any testnet wallet (e.g., Freighter, Albedo) in the app.
+
+### On-chain patterns
+
+**Sequence management:** Autopayze reads the account's current sequence from Horizon and increments it locally for each transaction in a batch. If submission fails, the sequence is not reused.
+
+**Timebounds:** All scheduled payments include `minTime` (epoch when scheduled) and `maxTime` (epoch + buffer). This prevents replay and enforces execution windows.
+
+**Claimable balances:** Airdrops use claimable balances to allow recipients to claim tokens without requiring pre-funded accounts. Each claimable balance has a unique claim ID and optional predicate.
+
+**Transaction fees:** Fee is calculated at build time using the network's current base fee (typically 100 stroops). For sponsored transactions, the sponsoring account signs separately.
+
+### Example: Build and submit a scheduled payment
+
+See [src/lib/schedule-service.ts](src/lib/schedule-service.ts) for the full pattern:
+
+```typescript
+// Read current sequence from Horizon
+const account = await horizon.loadAccount(accountId);
+
+// Build transaction with timebounds
+const transaction = new TransactionBuilder(account, {
+	fee: BASE_FEE,
+	networkPassphrase: Networks.TESTNET_NETWORK_PASSPHRASE,
+	timebounds: { minTime: scheduledTime, maxTime: scheduledTime + 3600 },
+})
+	.addOperation(
+		Operation.payment({
+			destination: recipientAddress,
+			asset: Asset.native(),
+			amount: "10.00",
+		}),
+	)
+	.build();
+
+// User's wallet signs; app does not hold keys
+const signed = await wallet.signTransaction(transaction);
+await horizon.submitTransaction(signed);
+```
+
+### Testing on testnet
+
+Run the integration test suite against testnet:
+
+```bash
+pnpm test:stellar
+```
+
+Tests fund temporary accounts, submit test transactions, and verify they appear in Horizon within finality (3–5 seconds).
+
 ## Security
 
 This codebase does not store private keys or trust AI-generated transaction instructions. All blockchain execution remains behind deterministic app logic and user approval.
+
+## CI/CD
+
+GitHub Actions runs on every push to `main` and `develop`:
+
+- **lint** — ESLint and code style checks
+- **typecheck** — TypeScript strict mode
+- **test** — Vitest unit tests
+- **test:stellar** — Testnet integration tests (Horizon API, transaction submission)
+- **audit** — Dependency vulnerability scan
+- **build** — Production build verification
+
+See [.github/workflows/ci.yml](.github/workflows/ci.yml) for the full pipeline.
+
+## Monitoring and Operations
+
+See [docs/RUNBOOK.md](docs/RUNBOOK.md) for troubleshooting scheduled payments, monitoring account state, and recovery procedures.
 
 ## Roadmap
 
@@ -116,3 +203,11 @@ This codebase does not store private keys or trust AI-generated transaction inst
 - stable wallet persistence and profile data model
 - admin operational tooling
 - real execution verification and receipts
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on contributing to this project.
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for release notes and feature history.
