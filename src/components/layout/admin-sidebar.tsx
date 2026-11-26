@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { NavSidebar, type NavItem } from "./nav-sidebar";
 import { Badge } from "@/components/ui/badge";
+import AutoPayzeLogo from "@/components/ui/AutoPayzeLogo";
 
 export const adminNavItems: NavItem[] = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -26,22 +27,11 @@ export const adminNavItems: NavItem[] = [
 
 export function AdminSidebar() {
   return (
-    <aside className="hidden w-60 shrink-0 border-r border-border bg-card/50 md:flex md:flex-col">
-      <div className="flex h-16 items-center gap-2 px-5">
+    <aside className="hidden w-64 shrink-0 border-r border-border/80 bg-card md:flex md:flex-col">
+      <div className="flex h-20 items-center gap-3 px-6">
         <Link href="/admin" className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M4 12L10 18L20 6"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </span>
-          <span className="font-display text-base font-semibold tracking-tight">
-            Autopayze
+          <span className="flex h-8 w-auto items-center">
+            <AutoPayzeLogo className="h-full w-auto" />
           </span>
         </Link>
         <Badge tone="info">Admin</Badge>

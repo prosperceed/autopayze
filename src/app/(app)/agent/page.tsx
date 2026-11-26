@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, startTransition } from "react";
 import {
   Bot,
-  Sparkles,
+  ShieldCheck,
   ExternalLink,
   CheckCircle2,
   AlertCircle,
@@ -365,7 +365,7 @@ export default function AgentPage() {
             <div className="flex flex-1 flex-col gap-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-lg border border-primary/20 bg-primary/5 p-2.5 sm:p-3 text-xs text-primary">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <Sparkles className="h-4 w-4 shrink-0" />
+                  <ShieldCheck className="h-4 w-4 shrink-0" />
                   <span className="truncate text-[11px] sm:text-xs">
                     Connected:{" "}
                     <strong className="font-mono">

@@ -144,7 +144,7 @@ export default function DashboardPage() {
           <h1 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
             Welcome back, {firstName}
           </h1>
-          <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
+          <p className="mt-1 max-w-xl text-xs font-medium sm:text-sm text-muted-foreground">
             {walletConnected
               ? "Your wallet is connected. Balances and activity update live."
               : "Connect your wallet to see live balance and activity."}

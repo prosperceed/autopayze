@@ -124,7 +124,7 @@ export function AgentDashboardMock() {
                 </div>
                 <div className="max-w-[80%] rounded-2xl rounded-tl-sm border border-border bg-muted/60 px-3 py-2">
                   <p className="text-[11px] leading-relaxed text-foreground">
-                    Got it. I'll schedule <span className="font-semibold text-primary">50 USDC → Alice</span> every Friday at 09:00 UTC.
+                    Got it. I&apos;ll schedule <span className="font-semibold text-primary">50 USDC → Alice</span> every Friday at 09:00 UTC.
                   </p>
                   {/* Intent card */}
                   <div className="mt-2 rounded-lg border border-border bg-card p-2.5">

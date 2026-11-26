@@ -9,6 +9,7 @@ import { NavSidebar } from "./nav-sidebar";
 import { adminNavItems } from "./admin-sidebar";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
+import AutoPayzeLogo from "@/components/ui/AutoPayzeLogo";
 
 function useBreadcrumb() {
   const pathname = usePathname();
@@ -95,8 +96,9 @@ export function AdminHeader({ userEmail }: { userEmail?: string | null }) {
           />
           <div className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-card p-4">
             <div className="mb-4 flex items-center justify-between">
-              <span className="font-display text-base font-semibold">
-                Autopayze <Badge tone="info">Admin</Badge>
+              <span className="flex items-center gap-2 font-display text-base font-semibold">
+                <span className="flex h-7 w-auto items-center"><AutoPayzeLogo className="h-full w-auto" /></span>
+                <Badge tone="info">Admin</Badge>
               </span>
               <button
                 type="button"

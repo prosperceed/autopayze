@@ -153,7 +153,7 @@ function NotificationToast({
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
-        <span className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-sky-400 via-primary to-indigo-400" aria-hidden="true" />
+        <span className="absolute inset-x-0 bottom-0 h-0.5 bg-primary" aria-hidden="true" />
       </div>
     </div>
   );

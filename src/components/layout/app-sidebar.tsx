@@ -26,11 +26,11 @@ export const appNavItems: NavItem[] = [
 
 export function AppSidebar() {
 	return (
-		<aside className="hidden w-60 shrink-0 border-r border-border bg-card/50 md:flex md:flex-col">
-			<div className="flex h-16 items-center px-5">
+		<aside className="hidden w-64 shrink-0 border-r border-border/80 bg-card md:flex md:flex-col">
+			<div className="flex h-20 items-center px-6">
 				<Link href="/dashboard" className="flex items-center gap-2">
-					<span className="flex h-24 w-auto items-center justify-center ">
-						<AutoPayzeLogo className="hidden lg:block h-full w-auto" />
+					<span className="flex h-9 w-auto items-center justify-center">
+						<AutoPayzeLogo className="hidden h-full w-auto lg:block" />
 					</span>
 				</Link>
 			</div>

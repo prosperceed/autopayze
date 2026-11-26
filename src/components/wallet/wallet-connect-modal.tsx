@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   Wallet,
-  Sparkles,
+  ShieldCheck,
   Smartphone,
   ExternalLink,
   X,
@@ -282,7 +282,7 @@ export function WalletConnectModal({
             <div className="space-y-4">
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3.5 text-xs text-muted-foreground space-y-1.5">
                 <p className="font-semibold text-primary flex items-center gap-1.5">
-                  <Sparkles className="h-4 w-4" /> Instant testnet wallet
+                  <ShieldCheck className="h-4 w-4" /> Instant testnet wallet
                 </p>
                 <p>
                   Generates a fresh Stellar keypair, funds it with 10,000 test XLM via Friendbot,
@@ -301,7 +301,7 @@ export function WalletConnectModal({
                 {isConnecting ? (
                   <><Loader2 className="h-4 w-4 animate-spin" /> Creating & funding wallet…</>
                 ) : (
-                  <><Sparkles className="h-4 w-4" /> Generate Testnet Wallet</>
+                  <><ShieldCheck className="h-4 w-4" /> Generate Testnet Wallet</>
                 )}
               </Button>
             </div>

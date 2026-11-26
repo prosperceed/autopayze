@@ -26,7 +26,7 @@ export default function AdminOverviewPage() {
           Platform overview
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          A live view of Autopayze once it&apos;s connected to production data.
+          A clear view of platform health, payment activity, and account operations.
         </p>
       </div>
 

@@ -17,7 +17,7 @@ export function AuthShell({
 		<div className="flex min-h-dvh flex-col bg-muted/30">
 			<div className="flex items-center justify-between px-6 py-5">
 				<Link href="/" className="flex items-center gap-2 mb-1 lg:mb-3">
-					<span className="flex h-24 w-auto items-center justify-center ">
+					<span className="flex h-9 w-auto items-center justify-center">
 						<AutoPayzeLogo className="h-full w-auto" />
 					</span>
 				</Link>

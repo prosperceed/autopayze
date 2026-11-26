@@ -11,8 +11,8 @@ const features = [
 		title: "Wallet",
 		description:
 			"See balances across chains in one place, with activity that updates as it happens.",
-		gradient: "from-[#6C63FF] via-[#9B8FFF] to-[#C4BEFF]",
-		overlayGradient: "from-[#3730a3]/90 via-[#4338ca]/60 to-transparent",
+		gradient: "from-slate-950 via-slate-800 to-slate-500",
+		overlayGradient: "from-slate-950/95 via-slate-900/70 to-transparent",
 	},
 	{
 		icon: (
@@ -21,8 +21,8 @@ const features = [
 		title: "Scheduled Payments",
 		description:
 			"Set payroll, rent, or recurring transfers once. Autopayze sends them on time without a reminder from you.",
-		gradient: "from-[#F472B6] via-[#FB7185] to-[#FECDD3]",
-		overlayGradient: "from-[#9d174d]/85 via-[#be185d]/55 to-transparent",
+		gradient: "from-stone-950 via-stone-700 to-stone-400",
+		overlayGradient: "from-stone-950/95 via-stone-900/70 to-transparent",
 	},
 	{
 		icon: (
@@ -31,8 +31,8 @@ const features = [
 		title: "Airdrops",
 		description:
 			"Distribute tokens to a list of addresses in one batch, with a clear record of who received what.",
-		gradient: "from-[#00C8FF] via-[#0066FF] to-[#1A103C]",
-		overlayGradient: "from-[#0c1445]/90 via-[#1e3a8a]/60 to-transparent",
+		gradient: "from-zinc-950 via-zinc-700 to-zinc-400",
+		overlayGradient: "from-zinc-950/95 via-zinc-900/70 to-transparent",
 	},
 	{
 		icon: (
@@ -41,8 +41,8 @@ const features = [
 		title: "AI Agent",
 		description:
 			"Tell the agent the outcome you want. It plans the transactions and asks before anything irreversible happens.",
-		gradient: "from-[#3B46F6] via-[#8033FF] to-[#C077FF]",
-		overlayGradient: "from-[#1e1b4b]/90 via-[#4c1d95]/60 to-transparent",
+		gradient: "from-neutral-950 via-neutral-800 to-neutral-500",
+		overlayGradient: "from-neutral-950/95 via-neutral-900/70 to-transparent",
 	},
 ];
 

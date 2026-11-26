@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, CheckCircle2, Wallet2, Sparkles } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Wallet2, ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/providers/wallet-provider";
@@ -65,7 +65,7 @@ export function WalletConnectionCard() {
                 Connect your Stellar wallet to start making payments and activating the AI agent.
               </p>
               <Button onClick={() => setModalOpen(true)} className="w-full gap-2">
-                <Sparkles className="h-4 w-4" />
+                <ShieldCheck className="h-4 w-4" />
                 Connect Stellar wallet
               </Button>
               {error ? (
