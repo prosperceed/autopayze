@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:stellar": "vitest run src/lib/stellar",
     "test:watch": "vitest"
   },
   "dependencies": {
